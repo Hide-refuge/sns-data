@@ -29,51 +29,65 @@ function installFonts(){
  }
 }
 function normalizedPlatform(v){const s=String(v||'').toLowerCase();return s==='x'||s==='twitter'?'twitter':s==='instagram'?'instagram':s}
+// Newest applicable setting wins, including a parent setting saved after a child setting.
+// This makes a parent change cascade through all of its descendants immediately.
+function newestRule(candidates){return candidates.filter(Boolean).sort((a,b)=>b.updated-a.updated)[0]||null}
+function pickRule(type,target){return state.rules.filter(r=>r.scope===type&&String(r.target)===String(target)).sort((a,b)=>b.updated-a.updated)[0]||null}
+function matchingKeywords(p){const keys=Array.isArray(p.keywords)?p.keywords:[];return state.rules.filter(r=>r.scope==='keyword'&&keys.some(k=>String(k).trim().toLocaleLowerCase()===String(r.target).trim().toLocaleLowerCase()))}
 function ruleFor(p){
- const rules=state.rules;
- const pick=(type,target)=>rules.filter(r=>r.scope===type&&String(r.target)===String(target)).sort((a,b)=>b.updated-a.updated)[0];
- const keywords=Array.isArray(p.keywords)?p.keywords:[];
- const matches=rules.filter(r=>r.scope==='keyword'&&keywords.some(k=>String(k).trim().toLocaleLowerCase()===String(r.target).trim().toLocaleLowerCase())).sort((a,b)=>b.updated-a.updated);
- return pick('post',p.id)||matches[0]||pick('folder',p.folderId)||pick('platform',normalizedPlatform(p.platform))||pick('all','*');
+ const folder=(window.scrapFontFolders?.()||[]).find(f=>String(f.id)===String(p.folderId));
+ return newestRule([pickRule('all','*'),pickRule('platform',normalizedPlatform(p.platform||folder?.platform)),pickRule('folder',p.folderId),...matchingKeywords(p),pickRule('post',p.id)]);
 }
-const FONT_CHILDREN='h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a';
-function clearFont(el){if(!el)return;for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){if(n.closest('.note-actions'))continue;n.style.removeProperty('font-family');n.style.removeProperty('font-weight')}}
+const FONT_CHILDREN='h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a,button,input,textarea,select,label,li';
+function clearFont(el){if(!el)return;for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){n.style.removeProperty('font-family');n.style.removeProperty('font-weight')}}
 function setFont(el,r){
  if(!el||!r)return;
  const f=font(r.fontId),family=JSON.stringify(f.family)+',system-ui,sans-serif';
  const weight=String(f.weights.includes(Number(r.weight))?r.weight:(f.weights[0]||400));
  for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){
-  if(n.closest('.note-actions'))continue;
   n.style.setProperty('font-family',family,'important');
   n.style.setProperty('font-weight',weight,'important');
  }
 }
 function apply(){
- const pick=(type,target)=>state.rules.filter(r=>r.scope===type&&String(r.target)===String(target)).sort((a,b)=>b.updated-a.updated)[0];
- const global=pick('all','*');
- const root=document.documentElement;
- if(global){const family=JSON.stringify(font(global.fontId).family)+',system-ui,sans-serif';root.style.setProperty('font-family',family,'important');document.body.style.setProperty('font-family',family,'important');document.body.style.setProperty('font-weight',String(global.weight),'important')}
- else{root.style.removeProperty('font-family');document.body.style.removeProperty('font-family');document.body.style.removeProperty('font-weight')}
  const data=window.scrapFontData?.()||[];
  const byId=new Map(data.map(p=>[String(p.id),p]));
  const folders=window.scrapFontFolders?.()||[];
  const byFolder=new Map(folders.map(f=>[String(f.id),f]));
  const route=window.scrapFontRoute?.()||{};
- const routeRule=(route.folder&&pick('folder',route.folder))||(route.platform&&pick('platform',normalizedPlatform(route.platform)))||global;
- // Cards on the platform landing screen and folder screen need their own rule.
- document.querySelectorAll('#view [data-platform],#view [data-folder],#view .section-head').forEach(el=>{
-  clearFont(el);
+ const routeFolder=byFolder.get(String(route.folder));
+ const routeRule=newestRule([pickRule('all','*'),route.platform&&pickRule('platform',normalizedPlatform(route.platform)),route.folder&&pickRule('folder',route.folder)]);
+ const root=document.documentElement,body=document.body,view=document.getElementById('view'),app=document.querySelector('main.app');
+ // Clean previous rules before calculating the current route; no saved data is touched.
+ for(const el of [root,body]){el.style.removeProperty('font-family');el.style.removeProperty('font-weight')}
+ if(app)clearFont(app);else if(view)clearFont(view);
+ const crumb=document.getElementById('crumb');if(crumb)clearFont(crumb);
+ const global=pickRule('all','*');
+ if(global){
+  const f=font(global.fontId),family=JSON.stringify(f.family)+',system-ui,sans-serif';
+  root.style.setProperty('font-family',family,'important');
+  body.style.setProperty('font-family',family,'important');
+  body.style.setProperty('font-weight',String(global.weight),'important');
+ }
+ // The selected platform/folder controls the entire screen, not only its cards.
+ // It also controls the breadcrumb and header while navigating within its subtree.
+ if(routeRule){
+  if(app)setFont(app,routeRule);else if(view)setFont(view,routeRule);
+  if(crumb)setFont(crumb,routeRule)
+ }
+ // Home platform cards and platform-level folder cards reflect their own branch.
+ if(view)for(const el of view.querySelectorAll('[data-platform],[data-folder]')){
   const platform=el.dataset.platform;
   const folderId=el.dataset.folder;
   const folder=folderId?byFolder.get(String(folderId)):null;
-  const r=folderId?(pick('folder',folderId)||pick('platform',normalizedPlatform(folder?.platform))||global):platform?(pick('platform',normalizedPlatform(platform))||global):routeRule;
+  const r=newestRule([routeRule,folderId&&pickRule('folder',folderId),platform&&pickRule('platform',normalizedPlatform(platform)),folder&&pickRule('platform',normalizedPlatform(folder.platform))]);
   if(r)setFont(el,r);
- });
- document.querySelectorAll('[data-font-post]').forEach(el=>{
-  clearFont(el);
+ }
+ // Individual scraps can override the inherited screen font if their rule is newer.
+ for(const el of document.querySelectorAll('[data-font-post]')){
   const p=byId.get(String(el.dataset.fontPost));
   if(p){const r=ruleFor(p);if(r)setFont(el,r)}
- });
+ }
 }
 function rerender(){installFonts();apply()}
 async function reloadCloud(){if(!window.scrapSync?.active){if(activeUser){activeUser=null;state=loadLocal();rerender()}return}if(!window.scrapSync.fontGet||fetching)return;fetching=true;try{const user=await window.scrapSync.fontUser();if(!user)return;if(activeUser!==user){activeUser=user;state=structuredClone(defaults)}const remote=await window.scrapSync.fontGet();state=remote?sanitize(remote):structuredClone(defaults);rerender()}catch(e){console.warn('Font cloud sync:',e.message)}finally{fetching=false}}
