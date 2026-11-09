@@ -29,8 +29,47 @@ function installFonts(){
  }
 }
 function ruleFor(p){const rules=state.rules;const pick=(type,target)=>rules.filter(r=>r.scope===type&&r.target===target).sort((a,b)=>b.updated-a.updated)[0];const keywords=Array.isArray(p.keywords)?p.keywords:[];const matches=rules.filter(r=>r.scope==='keyword'&&keywords.some(k=>String(k).toLocaleLowerCase()===r.target.toLocaleLowerCase())).sort((a,b)=>b.updated-a.updated);return pick('post',p.id)||matches[0]||pick('folder',p.folderId)||pick('platform',p.platform)||pick('all','*')}
-function setFont(el,r){if(!el||!r)return;const f=font(r.fontId);el.style.fontFamily=`${JSON.stringify(f.family)},system-ui,sans-serif`;el.style.fontWeight=String(f.weights.includes(Number(r.weight))?r.weight:f.weights[0])}
-function apply(){const global=state.rules.filter(r=>r.scope==='all').sort((a,b)=>b.updated-a.updated)[0];document.body.style.fontFamily=global?`${JSON.stringify(font(global.fontId).family)},system-ui,sans-serif`:'';document.body.style.fontWeight=global?String(global.weight):'';for(const el of document.querySelectorAll('[data-font-post]')){el.style.fontFamily='';el.style.fontWeight='';const p=(window.scrapFontData?.()||[]).find(x=>x.id===el.dataset.fontPost);if(p)setFont(el,ruleFor(p))}const heading=document.querySelector('#view .section-head h2');if(heading&&window.scrapFontRoute?.()?.folder){heading.style.fontFamily='';heading.style.fontWeight='';const folder=window.scrapFontRoute().folder;setFont(heading,state.rules.filter(r=>r.scope==='folder'&&r.target===folder).sort((a,b)=>b.updated-a.updated)[0]||state.rules.filter(r=>r.scope==='platform'&&r.target===window.scrapFontRoute()?.platform).sort((a,b)=>b.updated-a.updated)[0]||global)}}
+function setFont(el,r){
+ if(!el||!r)return;
+ const f=font(r.fontId),family=`${JSON.stringify(f.family)},system-ui,sans-serif`;
+ const weight=String(f.weights.includes(Number(r.weight))?r.weight:(f.weights[0]||400));
+ el.style.setProperty('font-family',family,'important');
+ el.style.setProperty('font-weight',weight,'important');
+ // Child headings, summaries and chips have their own font styles in the original CSS.
+ // Apply the selected family/weight to text elements, without altering controls or images.
+ el.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a').forEach(child=>{
+  if(child.closest('.note-actions'))return;
+  child.style.setProperty('font-family',family,'important');
+  child.style.setProperty('font-weight',weight,'important');
+ });
+}
+function apply(){
+ const global=state.rules.filter(r=>r.scope==='all').sort((a,b)=>b.updated-a.updated)[0];
+ const root=document.documentElement;
+ root.style.fontFamily=global?`${JSON.stringify(font(global.fontId).family)},system-ui,sans-serif`:'';
+ document.body.style.fontFamily=root.style.fontFamily;
+ // The original stylesheet sets :root font-family. Set it on root explicitly.
+ if(global){root.style.setProperty('font-family',root.style.fontFamily,'important');document.body.style.setProperty('font-family',root.style.fontFamily,'important')}
+ else{root.style.removeProperty('font-family');document.body.style.removeProperty('font-family')}
+ document.body.style.fontWeight=global?String(global.weight):'';
+ const data=window.scrapFontData?.()||[];
+ const byId=new Map(data.map(p=>[String(p.id),p]));
+ for(const el of document.querySelectorAll('[data-font-post]')){
+  el.style.removeProperty('font-family');el.style.removeProperty('font-weight');
+  el.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a').forEach(child=>{
+   child.style.removeProperty('font-family');child.style.removeProperty('font-weight');
+  });
+  const p=byId.get(el.dataset.fontPost);
+  if(p){const rule=ruleFor(p)||global;if(rule)setFont(el,rule)}
+ }
+ const heading=document.querySelector('#view .section-head h2');
+ if(heading){heading.style.removeProperty('font-family');heading.style.removeProperty('font-weight');
+  const route=window.scrapFontRoute?.()||{};
+  const match=(scope,target)=>state.rules.filter(r=>r.scope===scope&&r.target===target).sort((a,b)=>b.updated-a.updated)[0];
+  const rule=(route.folder&&match('folder',route.folder))||(route.platform&&match('platform',route.platform))||global;
+  if(rule)setFont(heading,rule);
+ }
+}
 function rerender(){installFonts();apply()}
 async function reloadCloud(){if(!window.scrapSync?.active){if(activeUser){activeUser=null;state=loadLocal();rerender()}return}if(!window.scrapSync.fontGet||fetching)return;fetching=true;try{const user=await window.scrapSync.fontUser();if(!user)return;if(activeUser!==user){activeUser=user;state=structuredClone(defaults)}const remote=await window.scrapSync.fontGet();state=remote?sanitize(remote):structuredClone(defaults);rerender()}catch(e){console.warn('Font cloud sync:',e.message)}finally{fetching=false}}
 async function save(){try{if(window.scrapSync?.active){if(!window.scrapSync.fontPut)throw Error('sync.js 파일을 새 버전으로 교체해 주세요.');await window.scrapSync.fontPut(state)}else localStorage.setItem(KEY,JSON.stringify(state));rerender();return true}catch(e){alert('폰트 설정 저장 실패: '+e.message);return false}}
@@ -85,6 +124,9 @@ async function saveCustom(){
 }
 function drawCustom(){const el=document.getElementById('fontCustomList');if(el)el.textContent='등록한 사용자 폰트: '+(state.fonts.filter(f=>f.id.startsWith('custom-')).map(f=>f.name+(f.files?' ('+f.files.length+'개 굵기 파일)':f.path?' ('+f.path+')':' (기존 CSS 방식)')).join(', ')||'없음')}
 function style(){const s=document.createElement('style');s.textContent=`.font-dialog{width:min(760px,100%)}.font-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.font-head h2{margin:0}.font-section{padding:15px 0}.font-section h3{font-size:16px;margin:0 0 16px}.font-radio{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:14px}.font-radio label{display:flex;gap:5px;align-items:center}.font-save{display:flex;justify-content:center;margin:18px 0 4px}.font-post-results{max-height:260px;overflow:auto;border:1px solid #e3e7f0;border-radius:10px}.font-post-option{display:flex;align-items:start;gap:10px;padding:10px 12px;border-bottom:1px solid #edf0f5}.font-post-option:last-child{border:0}.font-post-option span{display:grid;gap:4px}.font-post-option small{color:#7d8596}.font-result-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.font-result-head .btn{font-size:12px}.font-count-accordion{border:1px solid #e3e7f0;border-radius:10px;padding:12px;margin-bottom:14px}.font-count-accordion summary{cursor:pointer;font-weight:600}.font-count-options{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.font-multi-row{border:1px solid #e3e7f0;border-radius:10px;padding:12px;margin:10px 0}.font-multi-row strong{display:block;margin-bottom:10px}.font-dialog [hidden]{display:none!important}.font-dialog hr{border:0;border-top:1px solid #e4e8f0;margin:8px 0}`;document.head.append(s)}
-function init(){style();const exportBtn=document.getElementById('exportBtn');if(!exportBtn)return;const btn=document.createElement('button');btn.className='btn';btn.id='fontSettingsBtn';btn.textContent='font ver.';const importBtn=document.getElementById('importBtn');exportBtn.textContent='Backup_Export';if(importBtn)importBtn.textContent='Backup_Upload';exportBtn.parentNode.insertBefore(btn,exportBtn);if(importBtn)exportBtn.parentNode.insertBefore(importBtn,exportBtn);btn.onclick=open;window.scrapFontData=()=>window.scrapFontPosts?.()||[];rerender();setTimeout(reloadCloud,1300);setInterval(()=>{if(window.scrapSync?.active)reloadCloud();else if(activeUser){activeUser=null;state=loadLocal();rerender()}},15000)}
+function init(){style();const exportBtn=document.getElementById('exportBtn');if(!exportBtn)return;const btn=document.createElement('button');btn.className='btn';btn.id='fontSettingsBtn';btn.textContent='font ver.';const importBtn=document.getElementById('importBtn');exportBtn.textContent='Backup_Export';if(importBtn)importBtn.textContent='Backup_Upload';exportBtn.parentNode.insertBefore(btn,exportBtn);if(importBtn)exportBtn.parentNode.insertBefore(importBtn,exportBtn);btn.onclick=open;window.scrapFontData=()=>window.scrapFontPosts?.()||[];
+const view=document.getElementById('view');
+if(view){let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;apply()})}).observe(view,{childList:true,subtree:true})}
+rerender();setTimeout(reloadCloud,1300);setInterval(()=>{if(window.scrapSync?.active)reloadCloud();else if(activeUser){activeUser=null;state=loadLocal();rerender()}},15000)}
 window.scrapFontApply=apply;window.scrapFontCloudRefresh=reloadCloud;document.addEventListener('DOMContentLoaded',init);
 })();
