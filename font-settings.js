@@ -28,47 +28,52 @@ function installFonts(){
   }
  }
 }
-function ruleFor(p){const rules=state.rules;const pick=(type,target)=>rules.filter(r=>r.scope===type&&r.target===target).sort((a,b)=>b.updated-a.updated)[0];const keywords=Array.isArray(p.keywords)?p.keywords:[];const matches=rules.filter(r=>r.scope==='keyword'&&keywords.some(k=>String(k).toLocaleLowerCase()===r.target.toLocaleLowerCase())).sort((a,b)=>b.updated-a.updated);return pick('post',p.id)||matches[0]||pick('folder',p.folderId)||pick('platform',p.platform)||pick('all','*')}
+function normalizedPlatform(v){const s=String(v||'').toLowerCase();return s==='x'||s==='twitter'?'twitter':s==='instagram'?'instagram':s}
+function ruleFor(p){
+ const rules=state.rules;
+ const pick=(type,target)=>rules.filter(r=>r.scope===type&&String(r.target)===String(target)).sort((a,b)=>b.updated-a.updated)[0];
+ const keywords=Array.isArray(p.keywords)?p.keywords:[];
+ const matches=rules.filter(r=>r.scope==='keyword'&&keywords.some(k=>String(k).trim().toLocaleLowerCase()===String(r.target).trim().toLocaleLowerCase())).sort((a,b)=>b.updated-a.updated);
+ return pick('post',p.id)||matches[0]||pick('folder',p.folderId)||pick('platform',normalizedPlatform(p.platform))||pick('all','*');
+}
+const FONT_CHILDREN='h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a';
+function clearFont(el){if(!el)return;for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){if(n.closest('.note-actions'))continue;n.style.removeProperty('font-family');n.style.removeProperty('font-weight')}}
 function setFont(el,r){
  if(!el||!r)return;
- const f=font(r.fontId),family=`${JSON.stringify(f.family)},system-ui,sans-serif`;
+ const f=font(r.fontId),family=JSON.stringify(f.family)+',system-ui,sans-serif';
  const weight=String(f.weights.includes(Number(r.weight))?r.weight:(f.weights[0]||400));
- el.style.setProperty('font-family',family,'important');
- el.style.setProperty('font-weight',weight,'important');
- // Child headings, summaries and chips have their own font styles in the original CSS.
- // Apply the selected family/weight to text elements, without altering controls or images.
- el.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a').forEach(child=>{
-  if(child.closest('.note-actions'))return;
-  child.style.setProperty('font-family',family,'important');
-  child.style.setProperty('font-weight',weight,'important');
- });
+ for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){
+  if(n.closest('.note-actions'))continue;
+  n.style.setProperty('font-family',family,'important');
+  n.style.setProperty('font-weight',weight,'important');
+ }
 }
 function apply(){
- const global=state.rules.filter(r=>r.scope==='all').sort((a,b)=>b.updated-a.updated)[0];
+ const pick=(type,target)=>state.rules.filter(r=>r.scope===type&&String(r.target)===String(target)).sort((a,b)=>b.updated-a.updated)[0];
+ const global=pick('all','*');
  const root=document.documentElement;
- root.style.fontFamily=global?`${JSON.stringify(font(global.fontId).family)},system-ui,sans-serif`:'';
- document.body.style.fontFamily=root.style.fontFamily;
- // The original stylesheet sets :root font-family. Set it on root explicitly.
- if(global){root.style.setProperty('font-family',root.style.fontFamily,'important');document.body.style.setProperty('font-family',root.style.fontFamily,'important')}
- else{root.style.removeProperty('font-family');document.body.style.removeProperty('font-family')}
- document.body.style.fontWeight=global?String(global.weight):'';
+ if(global){const family=JSON.stringify(font(global.fontId).family)+',system-ui,sans-serif';root.style.setProperty('font-family',family,'important');document.body.style.setProperty('font-family',family,'important');document.body.style.setProperty('font-weight',String(global.weight),'important')}
+ else{root.style.removeProperty('font-family');document.body.style.removeProperty('font-family');document.body.style.removeProperty('font-weight')}
  const data=window.scrapFontData?.()||[];
  const byId=new Map(data.map(p=>[String(p.id),p]));
- for(const el of document.querySelectorAll('[data-font-post]')){
-  el.style.removeProperty('font-family');el.style.removeProperty('font-weight');
-  el.querySelectorAll('h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a').forEach(child=>{
-   child.style.removeProperty('font-family');child.style.removeProperty('font-weight');
-  });
-  const p=byId.get(el.dataset.fontPost);
-  if(p){const rule=ruleFor(p)||global;if(rule)setFont(el,rule)}
- }
- const heading=document.querySelector('#view .section-head h2');
- if(heading){heading.style.removeProperty('font-family');heading.style.removeProperty('font-weight');
-  const route=window.scrapFontRoute?.()||{};
-  const match=(scope,target)=>state.rules.filter(r=>r.scope===scope&&r.target===target).sort((a,b)=>b.updated-a.updated)[0];
-  const rule=(route.folder&&match('folder',route.folder))||(route.platform&&match('platform',route.platform))||global;
-  if(rule)setFont(heading,rule);
- }
+ const folders=window.scrapFontFolders?.()||[];
+ const byFolder=new Map(folders.map(f=>[String(f.id),f]));
+ const route=window.scrapFontRoute?.()||{};
+ const routeRule=(route.folder&&pick('folder',route.folder))||(route.platform&&pick('platform',normalizedPlatform(route.platform)))||global;
+ // Cards on the platform landing screen and folder screen need their own rule.
+ document.querySelectorAll('#view [data-platform],#view [data-folder],#view .section-head').forEach(el=>{
+  clearFont(el);
+  const platform=el.dataset.platform;
+  const folderId=el.dataset.folder;
+  const folder=folderId?byFolder.get(String(folderId)):null;
+  const r=folderId?(pick('folder',folderId)||pick('platform',normalizedPlatform(folder?.platform))||global):platform?(pick('platform',normalizedPlatform(platform))||global):routeRule;
+  if(r)setFont(el,r);
+ });
+ document.querySelectorAll('[data-font-post]').forEach(el=>{
+  clearFont(el);
+  const p=byId.get(String(el.dataset.fontPost));
+  if(p){const r=ruleFor(p);if(r)setFont(el,r)}
+ });
 }
 function rerender(){installFonts();apply()}
 async function reloadCloud(){if(!window.scrapSync?.active){if(activeUser){activeUser=null;state=loadLocal();rerender()}return}if(!window.scrapSync.fontGet||fetching)return;fetching=true;try{const user=await window.scrapSync.fontUser();if(!user)return;if(activeUser!==user){activeUser=user;state=structuredClone(defaults)}const remote=await window.scrapSync.fontGet();state=remote?sanitize(remote):structuredClone(defaults);rerender()}catch(e){console.warn('Font cloud sync:',e.message)}finally{fetching=false}}
