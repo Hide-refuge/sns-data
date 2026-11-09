@@ -59,5 +59,3 @@ function style(){const s=document.createElement('style');s.textContent=`.font-di
 function init(){style();const exportBtn=document.getElementById('exportBtn');if(!exportBtn)return;const btn=document.createElement('button');btn.className='btn';btn.id='fontSettingsBtn';btn.textContent='font ver.';exportBtn.after(btn);btn.onclick=open;window.scrapFontData=()=>window.scrapFontPosts?.()||[];rerender();setTimeout(reloadCloud,1300);setInterval(()=>{if(window.scrapSync?.active)reloadCloud();else if(activeUser){activeUser=null;state=loadLocal();rerender()}},15000)}
 window.scrapFontApply=apply;window.scrapFontCloudRefresh=reloadCloud;document.addEventListener('DOMContentLoaded',init);
 })();
-
-})();
