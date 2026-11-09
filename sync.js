@@ -30,6 +30,17 @@
     }
     return out;
   }
+  // Font settings use their own RLS-protected table, without touching scrap data.
+  sync.fontUser=async()=>user?.id||null;
+  sync.fontGet=async()=>{
+    if(!sync.active)throw Error('로그인이 필요합니다.');
+    const {data,error}=await client.from('scrap_font_settings').select('data').eq('user_id',user.id).maybeSingle();
+    if(error)throw error;return data?.data||null;
+  };
+  sync.fontPut=async value=>{
+    if(!sync.active)throw Error('로그인이 필요합니다.');
+    errorCheck(await client.from('scrap_font_settings').upsert({user_id:user.id,data:value,updated_at:new Date().toISOString()},{onConflict:'user_id'}));
+  };
   sync.getAll=async store=>{
     if(!sync.active)throw Error('로그인되지 않았습니다.');
     return fetchAll(store);
@@ -65,8 +76,8 @@
     user=session?.user||null;sync.active=!!user;
     sync.lastSignature=null;
     draw();
-    if(sync.active){msg('로그인됨: '+user.email+' · 클라우드 데이터 불러오는 중');await window.scrapRefresh?.();}
-    else{msg(valid?'로그아웃 상태 · 이 기기의 IndexedDB 사용':'연결 설정 필요: sync-config.js의 Publishable key를 입력하세요.');await window.scrapRefresh?.();}
+    if(sync.active){setTimeout(()=>window.scrapFontCloudRefresh?.(),0);msg('로그인됨: '+user.email+' · 클라우드 데이터 불러오는 중');await window.scrapRefresh?.();}
+    else{setTimeout(()=>window.scrapFontCloudRefresh?.(),0);msg(valid?'로그아웃 상태 · 이 기기의 IndexedDB 사용':'연결 설정 필요: sync-config.js의 Publishable key를 입력하세요.');await window.scrapRefresh?.();}
   }
   function draw(){
     const root=$('syncControls');if(!root)return;
