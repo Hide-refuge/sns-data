@@ -28,65 +28,45 @@ function installFonts(){
   }
  }
 }
-function normalizedPlatform(v){const s=String(v||'').toLowerCase();return s==='x'||s==='twitter'?'twitter':s==='instagram'?'instagram':s}
-// Newest applicable setting wins, including a parent setting saved after a child setting.
-// This makes a parent change cascade through all of its descendants immediately.
+function normalizedPlatform(v){const s=String(v||'').trim().toLowerCase();return s==='x'||s==='twitter'?'twitter':s==='instagram'?'instagram':s}
+// Each save has an update timestamp. The most recently saved applicable ancestor
+// wins, even when an older, more specific setting exists.
 function newestRule(candidates){return candidates.filter(Boolean).sort((a,b)=>b.updated-a.updated)[0]||null}
 function pickRule(type,target){return state.rules.filter(r=>r.scope===type&&String(r.target)===String(target)).sort((a,b)=>b.updated-a.updated)[0]||null}
+function folderChain(folderId,byFolder){const chain=[],visited=new Set();let id=String(folderId||'');while(id&&byFolder.has(id)&&!visited.has(id)){visited.add(id);const folder=byFolder.get(id);chain.push(folder);id=String(folder.parentId||folder.parentFolderId||folder.parent_id||'')}return chain}
+function branchRules(platform,folderId,byFolder){const chain=folderChain(folderId,byFolder);const actualPlatform=normalizedPlatform(platform||chain.find(f=>normalizedPlatform(f.platform))?.platform);return [pickRule('all','*'),actualPlatform&&pickRule('platform',actualPlatform),...chain.map(f=>pickRule('folder',f.id))]}
 function matchingKeywords(p){const keys=Array.isArray(p.keywords)?p.keywords:[];return state.rules.filter(r=>r.scope==='keyword'&&keys.some(k=>String(k).trim().toLocaleLowerCase()===String(r.target).trim().toLocaleLowerCase()))}
-function ruleFor(p){
- const folder=(window.scrapFontFolders?.()||[]).find(f=>String(f.id)===String(p.folderId));
- return newestRule([pickRule('all','*'),pickRule('platform',normalizedPlatform(p.platform||folder?.platform)),pickRule('folder',p.folderId),...matchingKeywords(p),pickRule('post',p.id)]);
-}
-const FONT_CHILDREN='h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a,button,input,textarea,select,label,li';
+function ruleFor(p,byFolder){return newestRule([...branchRules(p.platform,p.folderId,byFolder),...matchingKeywords(p),pickRule('post',p.id)])}
+const FONT_CHILDREN='h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a,button,input,textarea,select,label,li,article,section';
 function clearFont(el){if(!el)return;for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){n.style.removeProperty('font-family');n.style.removeProperty('font-weight')}}
-function setFont(el,r){
- if(!el||!r)return;
- const f=font(r.fontId),family=JSON.stringify(f.family)+',system-ui,sans-serif';
- const weight=String(f.weights.includes(Number(r.weight))?r.weight:(f.weights[0]||400));
- for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){
-  n.style.setProperty('font-family',family,'important');
-  n.style.setProperty('font-weight',weight,'important');
- }
-}
+function setFont(el,r){if(!el||!r)return;const f=font(r.fontId),family=JSON.stringify(f.family)+',system-ui,sans-serif';const weight=String(f.weights.includes(Number(r.weight))?r.weight:(f.weights[0]||400));for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){n.style.setProperty('font-family',family,'important');n.style.setProperty('font-weight',weight,'important')}}
 function apply(){
- const data=window.scrapFontData?.()||[];
- const byId=new Map(data.map(p=>[String(p.id),p]));
+ const posts=window.scrapFontData?.()||window.scrapFontPosts?.()||[];
+ const byId=new Map(posts.map(p=>[String(p.id),p]));
  const folders=window.scrapFontFolders?.()||[];
  const byFolder=new Map(folders.map(f=>[String(f.id),f]));
  const route=window.scrapFontRoute?.()||{};
- const routeFolder=byFolder.get(String(route.folder));
- const routeRule=newestRule([pickRule('all','*'),route.platform&&pickRule('platform',normalizedPlatform(route.platform)),route.folder&&pickRule('folder',route.folder)]);
+ const routeRule=newestRule(branchRules(route.platform,route.folder,byFolder));
  const root=document.documentElement,body=document.body,view=document.getElementById('view'),app=document.querySelector('main.app');
- // Clean previous rules before calculating the current route; no saved data is touched.
  for(const el of [root,body]){el.style.removeProperty('font-family');el.style.removeProperty('font-weight')}
  if(app)clearFont(app);else if(view)clearFont(view);
  const crumb=document.getElementById('crumb');if(crumb)clearFont(crumb);
- const global=pickRule('all','*');
- if(global){
-  const f=font(global.fontId),family=JSON.stringify(f.family)+',system-ui,sans-serif';
-  root.style.setProperty('font-family',family,'important');
-  body.style.setProperty('font-family',family,'important');
-  body.style.setProperty('font-weight',String(global.weight),'important');
- }
- // The selected platform/folder controls the entire screen, not only its cards.
- // It also controls the breadcrumb and header while navigating within its subtree.
- if(routeRule){
-  if(app)setFont(app,routeRule);else if(view)setFont(view,routeRule);
-  if(crumb)setFont(crumb,routeRule)
- }
- // Home platform cards and platform-level folder cards reflect their own branch.
+ // The page itself inherits the selected platform or folder font.
+ const pageRule=routeRule||pickRule('all','*');
+ if(pageRule){setFont(root,pageRule);setFont(body,pageRule);if(app)setFont(app,pageRule);else if(view)setFont(view,pageRule);if(crumb)setFont(crumb,pageRule)}
+ // Home: each platform card uses its own branch. Platform: each folder card
+ // uses its own branch. A newer ancestor overrides older descendants.
  if(view)for(const el of view.querySelectorAll('[data-platform],[data-folder]')){
-  const platform=el.dataset.platform;
   const folderId=el.dataset.folder;
   const folder=folderId?byFolder.get(String(folderId)):null;
-  const r=newestRule([routeRule,folderId&&pickRule('folder',folderId),platform&&pickRule('platform',normalizedPlatform(platform)),folder&&pickRule('platform',normalizedPlatform(folder.platform))]);
+  const r=newestRule(branchRules(el.dataset.platform||folder?.platform||route.platform,folderId||route.folder,byFolder));
   if(r)setFont(el,r);
  }
- // Individual scraps can override the inherited screen font if their rule is newer.
- for(const el of document.querySelectorAll('[data-font-post]')){
+ // Individual scrap cards are re-applied after page-level styling, so they
+ // inherit the latest applicable platform/folder rule unless overridden later.
+ for(const el of document.querySelectorAll('#view [data-font-post]')){
   const p=byId.get(String(el.dataset.fontPost));
-  if(p){const r=ruleFor(p);if(r)setFont(el,r)}
+  if(p){const r=ruleFor(p,byFolder);if(r)setFont(el,r)}
  }
 }
 function rerender(){installFonts();apply()}
