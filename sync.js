@@ -54,23 +54,20 @@
     if(!sync.active)throw Error('로그인되지 않았습니다.');
     errorCheck(await client.from(table[store]).delete().eq('user_id',user.id).eq('id',id));
   };
+  // Egress 절감: 사용자 요청 시에만 클라우드 전체 데이터를 한 번 조회합니다.
   async function update(){
-    if(!sync.active||busy||document.hidden)return;
+    if(!sync.active||busy)return;
+    if(document.querySelector('#modalRoot .overlay') || document.querySelector('#folderForm:focus-within')){
+      msg('편집 창을 닫은 뒤 지금 동기화를 눌러 주세요.');return;
+    }
     busy=true;
+    const button=$('syncNow');if(button)button.disabled=true;
     try{
-      const [f,p]=await Promise.all([fetchAll('folders'),fetchAll('posts')]);
-      // 기존 페이지의 전역 상태를 건드리지 않고 기존 refresh()를 통해 갱신합니다.
-      // 입력 중인 대화상자가 있으면 화면 재구성을 피합니다.
-      const signature=JSON.stringify([f,p]);
-      if(signature!==sync.lastSignature){
-        sync.lastSignature=signature;
-        if(!document.querySelector('#modalRoot .overlay') && !document.querySelector('#folderForm:focus-within')){
-          await window.scrapRefresh?.();
-        }
-      }
-      lastSync=Date.now();msg('클라우드 연결됨 · 마지막 확인 '+new Date(lastSync).toLocaleTimeString('ko-KR'));
-    }catch(e){msg('동기화 확인 실패: '+errText(e));}
-    finally{busy=false;}
+      await window.scrapRefresh?.();
+      lastSync=Date.now();
+      msg('클라우드 동기화 완료 · '+new Date(lastSync).toLocaleTimeString('ko-KR')+' · 자동 반복 조회 꺼짐');
+    }catch(e){msg('동기화 실패: '+errText(e));}
+    finally{busy=false;if(button?.isConnected)button.disabled=false;}
   }
   async function setSession(session){
     user=session?.user||null;sync.active=!!user;
@@ -84,7 +81,7 @@
     if(!valid){root.innerHTML='<p class="warning">sync-config.js 파일에 Supabase Publishable key를 입력한 뒤 GitHub에 업로드하세요. 비밀키는 절대 사용하지 마세요.</p>';return;}
     if(user){
       root.innerHTML=`<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">iPad 로컬 자료를 클라우드로 복사</button><button class="btn" id="syncLogout">로그아웃</button></div><p class="hint">로그인 중에는 클라우드에 저장됩니다. 기존 로컬 자료는 자동으로 삭제되지 않습니다. 로컬 자료 이전은 최초 1회만 실행하세요.</p>`;
-      $('syncNow').onclick=()=>{sync.lastSignature=null;update()};
+      $('syncNow').onclick=update;
       $('syncLogout').onclick=async()=>{try{errorCheck(await client.auth.signOut())}catch(e){alert(errText(e))}};
       $('migrateLocal').onclick=migrate;
     }else{
@@ -126,8 +123,7 @@
       if(event==='SIGNED_IN' && user?.id!==session?.user?.id) setTimeout(()=>setSession(session),0);
       if(event==='SIGNED_OUT')setTimeout(()=>setSession(null),0);
     });
-    setInterval(update,15000);
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden)update()});
+    // 자동 15초 조회 및 탭 재진입 시 전체 조회를 중단합니다.
   }
   window.addEventListener('load',init);
 })();
