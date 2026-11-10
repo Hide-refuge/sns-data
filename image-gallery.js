@@ -11,8 +11,11 @@
     .note-cover.gallery-stack::after{transform:translate(4px,-3px);z-index:-1;background:#f5f6fa;}
     .note-cover.gallery-stack img{border-radius:8px;}
     .note-cover .cover-count.gallery-count{bottom:3px;right:3px;font-weight:700;font-size:11px;background:#1d2439dd;padding:3px 7px;}
-    .note .thumbs.gallery-thumbs-many{position:relative;padding:7px 7px 20px 2px;}
-    .note .thumbs.gallery-thumbs-many .thumb:first-child{box-shadow:3px -3px 0 #f6f7fb,6px -6px 0 #cdd5e7;}
+    /* 3장 이상: 대표 사진 1장만 보이고 나머지는 확대 갤러리에서 탐색 */
+    .note .thumbs.gallery-thumbs-many{position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:0;padding:6px 9px 0 2px;}
+    .note .thumbs.gallery-thumbs-many .thumb{display:none;}
+    .note .thumbs.gallery-thumbs-many .thumb:first-child{display:block;box-shadow:3px -3px 0 #f6f7fb,6px -6px 0 #cdd5e7;}
+    .note .thumbs.gallery-thumbs-many .gallery-thumbs-count{flex-basis:100%;margin-top:7px;}
     .gallery-thumbs-count{display:block;width:100%;font-size:11px;color:#788092;font-weight:700;margin-top:2px;}
     .scrap-gallery-overlay{position:fixed;inset:0;z-index:10000;background:rgba(16,20,32,.93);display:flex;align-items:center;justify-content:center;padding:58px 58px 65px;}
     .scrap-gallery-stage{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:0;}
