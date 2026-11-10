@@ -11,6 +11,9 @@
     .note-cover.gallery-stack::after{transform:translate(4px,-3px);z-index:-1;background:#f5f6fa;}
     .note-cover.gallery-stack img{border-radius:8px;}
     .note-cover .cover-count.gallery-count{bottom:3px;right:3px;font-weight:700;font-size:11px;background:#1d2439dd;padding:3px 7px;}
+    .note .thumbs.gallery-thumbs-many{position:relative;padding:7px 7px 20px 2px;}
+    .note .thumbs.gallery-thumbs-many .thumb:first-child{box-shadow:3px -3px 0 #f6f7fb,6px -6px 0 #cdd5e7;}
+    .gallery-thumbs-count{display:block;width:100%;font-size:11px;color:#788092;font-weight:700;margin-top:2px;}
     .scrap-gallery-overlay{position:fixed;inset:0;z-index:10000;background:rgba(16,20,32,.93);display:flex;align-items:center;justify-content:center;padding:58px 58px 65px;}
     .scrap-gallery-stage{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:0;}
     .scrap-gallery-photo{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;}
@@ -34,8 +37,17 @@
       const count = Array.isArray(post?.images) ? post.images.length : 0;
       cover.classList.toggle('gallery-stack', count >= 3);
       const label = cover.querySelector('.cover-count');
-      if(label){label.textContent = count >= 1 ? `${count}장` : '';label.classList.toggle('gallery-count', count >= 1);}
+      if(label){const next=count >= 1 ? `${count}장` : '';if(label.textContent!==next)label.textContent=next;label.classList.toggle('gallery-count', count >= 1);}
       else if(count >= 1){const span = document.createElement('span');span.className='cover-count gallery-count';span.textContent=`${count}장`;cover.appendChild(span);}
+    });
+    document.querySelectorAll('.note .thumbs').forEach(group=>{
+      const images=group.querySelectorAll('img[data-image]');
+      group.classList.toggle('gallery-thumbs-many',images.length>=3);
+      let badge=group.querySelector('.gallery-thumbs-count');
+      if(images.length){
+        if(!badge){badge=document.createElement('span');badge.className='gallery-thumbs-count';group.appendChild(badge);}
+        const next=images.length+'장';if(badge.textContent!==next)badge.textContent=next;
+      }else if(badge){badge.remove();}
     });
   }
   let scheduled = false;
