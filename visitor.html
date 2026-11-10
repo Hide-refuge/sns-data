@@ -1,0 +1,72 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Curated by Hide · Visitor</title><style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#293142;background:#f6f7fb}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:1000px;margin:auto;padding:24px 15px}
+h1{font-size:24px;color:#465cc7}.panel{background:#fff;border:1px solid #e5e8f0;border-radius:15px;padding:20px;margin:14px 0}
+label{display:block;font-size:13px;margin:12px 0 5px}input,select{width:100%;padding:11px;border:1px solid #dfe3ed;border-radius:8px;font:inherit}
+button{background:#465cc7;color:#fff;border:0;border-radius:9px;padding:10px 14px;font:inherit;cursor:pointer}
+button.secondary{background:#eef0fa;color:#3547a0}button:disabled{opacity:.5}.actions{display:flex;gap:8px;flex-wrap:wrap}
+small,.muted{color:#778095}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.item{padding:14px;border:1px solid #e4e8f0;border-radius:10px;background:white;overflow-wrap:anywhere}
+.item h3{margin:0 0 8px;font-size:16px}.item p{white-space:pre-wrap;line-height:1.6}
+a{color:#465cc7;overflow-wrap:anywhere}.hidden{display:none!important}
+</style></head><body><main class="wrap">
+<h1>Curated by Hide</h1><p class="muted">Visitor · 읽기 전용</p>
+<section class="panel" id="loginPanel"><h2>방문자 로그인</h2><form id="loginForm">
+<label for="username">아이디</label><input id="username" autocomplete="username" required value="visitor">
+<label for="password">비밀번호</label><input id="password" type="password" autocomplete="current-password" required>
+<p><button type="submit">로그인</button></p></form></section>
+<section id="archive" class="hidden"><div class="actions"><button id="reload">새로고침</button><button id="logout" class="secondary">로그아웃</button></div>
+<section class="panel"><label for="platform">플랫폼</label><select id="platform"><option value="">전체 플랫폼</option></select>
+<label for="folder">폴더</label><select id="folder"><option value="">전체 폴더</option></select>
+<label for="search">검색</label><input id="search" type="search" placeholder="제목·내용·키워드 검색"></section>
+<div id="results"></div></section><p id="status" class="muted" role="status"></p>
+</main><script src="./sync-config.js"></script><script>
+'use strict';
+const cfg=window.SCRAP_SUPABASE_CONFIG||{};
+const endpoint=(cfg.url||'').replace(/\/$/,'')+'/functions/v1/visitor-access';
+const $=id=>document.getElementById(id);
+let session=sessionStorage.getItem('scrap-visitor-token')||'',folders=[],posts=[];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeLink=v=>{try{const u=new URL(v);return ['https:','http:'].includes(u.protocol)?u.href:''}catch{return ''}};
+async function api(action,payload={},token=''){
+ const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({action,...payload}),cache:'no-store'});
+ const data=await res.json();if(!res.ok)throw Error(data.error||'서버 오류');return data;
+}
+function show(isLogged){$('loginPanel').classList.toggle('hidden',isLogged);$('archive').classList.toggle('hidden',!isLogged)}
+function options(){
+ const ps=[...new Set(posts.map(p=>String(p.platform||'')).filter(Boolean))];
+ $('platform').innerHTML='<option value="">전체 플랫폼</option>'+ps.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+ foldersChanged();
+}
+function foldersChanged(){
+ const p=$('platform').value,old=$('folder').value;
+ const list=folders.filter(f=>!p||f.platform===p);
+ $('folder').innerHTML='<option value="">전체 폴더</option>'+list.map(f=>`<option value="${esc(f.id)}">${esc(f.name||'이름 없는 폴더')}</option>`).join('');
+ if(list.some(f=>f.id===old))$('folder').value=old;
+ render();
+}
+function render(){
+ const p=$('platform').value,f=$('folder').value,q=$('search').value.toLocaleLowerCase();
+ const items=posts.filter(x=>(!p||x.platform===p)&&(!f||x.folderId===f)&&(!q||JSON.stringify([x.title,x.summary,x.description,x.keywords,x.tags]).toLocaleLowerCase().includes(q)));
+ $('results').innerHTML=`<p class="muted">스크랩 ${items.length}개</p><div class="grid">`+items.map(x=>{
+ const url=safeLink(x.url||x.link||'');
+ const title=esc(x.title||'제목 없음');
+ const desc=esc(x.summary||x.description||x.content||'');
+ return `<article class="item"><h3>${title}</h3><p>${desc}</p>${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">원본 링크 열기</a>`:''}</article>`;
+ }).join('')+'</div>';
+}
+async function load(){
+ $('status').textContent='자료를 불러오는 중입니다.';
+ try{const data=await api('list',{},session);folders=data.folders||[];posts=data.posts||[];show(true);options();$('status').textContent='읽기 전용 · 자료 조회 완료'}
+ catch(e){session='';sessionStorage.removeItem('scrap-visitor-token');show(false);$('status').textContent=e.message}
+}
+$('loginForm').onsubmit=async e=>{
+ e.preventDefault();const b=e.submitter;b.disabled=true;
+ try{const data=await api('login',{username:$('username').value,password:$('password').value});$('password').value='';session=data.token;sessionStorage.setItem('scrap-visitor-token',session);await load()}
+ catch(e){$('status').textContent=e.message}finally{b.disabled=false}
+};
+$('reload').onclick=load;$('logout').onclick=()=>{session='';sessionStorage.removeItem('scrap-visitor-token');folders=[];posts=[];$('results').replaceChildren();show(false);$('status').textContent='로그아웃했습니다.'};
+$('platform').onchange=foldersChanged;$('folder').onchange=render;$('search').oninput=render;
+if(session)load();
+</script></body></html>
