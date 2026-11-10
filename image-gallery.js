@@ -5,11 +5,9 @@
   window.scrapImageGalleryInstalled = true;
   const style = document.createElement('style');
   style.textContent = `
-    .note-cover.gallery-stack{overflow:visible;isolation:isolate;margin:4px 7px 4px 3px;}
-    .note-cover.gallery-stack::before,.note-cover.gallery-stack::after{content:"";position:absolute;inset:0;border-radius:9px;background:#e1e6f1;border:1px solid #cdd5e7;pointer-events:none;}
-    .note-cover.gallery-stack::before{transform:translate(7px,-5px);z-index:-2;}
-    .note-cover.gallery-stack::after{transform:translate(4px,-3px);z-index:-1;background:#f5f6fa;}
-    .note-cover.gallery-stack img{border-radius:8px;}
+    /* 간략형·제목형: 좌측에는 첫 번째 이미지 한 장만 표시 */
+    .note.compact .note-cover,.note.titleonly .note-cover{overflow:hidden;margin:0;isolation:auto;}
+    .note.compact .thumbs,.note.titleonly .thumbs,.note.compact .thumbs.gallery-thumbs-many,.note.titleonly .thumbs.gallery-thumbs-many{display:none!important;}
     .note-cover .cover-count.gallery-count{bottom:3px;right:3px;font-weight:700;font-size:11px;background:#1d2439dd;padding:3px 7px;}
     /* 3장 이상: 대표 사진 1장만 보이고 나머지는 확대 갤러리에서 탐색 */
     .note .thumbs.gallery-thumbs-many{position:relative;display:flex;flex-wrap:wrap;align-items:flex-start;gap:0;padding:6px 9px 0 2px;}
@@ -38,7 +36,7 @@
       if(!img) return;
       const post = allPosts().find(p => String(p.id) === String(img.dataset.image));
       const count = Array.isArray(post?.images) ? post.images.length : 0;
-      cover.classList.toggle('gallery-stack', count >= 3);
+      cover.classList.remove('gallery-stack');
       const label = cover.querySelector('.cover-count');
       if(label){const next=count >= 1 ? `${count}장` : '';if(label.textContent!==next)label.textContent=next;label.classList.toggle('gallery-count', count >= 1);}
       else if(count >= 1){const span = document.createElement('span');span.className='cover-count gallery-count';span.textContent=`${count}장`;cover.appendChild(span);}
