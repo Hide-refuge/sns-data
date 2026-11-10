@@ -64,6 +64,8 @@
     const button=$('syncNow');if(button)button.disabled=true;
     try{
       await window.scrapRefresh?.();
+      // 수동 동기화 시 폰트 설정도 한 번만 조회합니다.
+      await window.scrapFontCloudRefresh?.();
       lastSync=Date.now();
       msg('클라우드 동기화 완료 · '+new Date(lastSync).toLocaleTimeString('ko-KR')+' · 자동 반복 조회 꺼짐');
     }catch(e){msg('동기화 실패: '+errText(e));}

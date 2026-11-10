@@ -435,6 +435,6 @@ function style(){const s=document.createElement('style');s.textContent=`.font-di
 function init(){style();const exportBtn=document.getElementById('exportBtn');if(!exportBtn)return;const btn=document.createElement('button');btn.className='btn';btn.id='fontSettingsBtn';btn.textContent='font ver.';const importBtn=document.getElementById('importBtn');exportBtn.textContent='Backup_Export';if(importBtn)importBtn.textContent='Backup_Upload';exportBtn.parentNode.insertBefore(btn,exportBtn);if(importBtn)exportBtn.parentNode.insertBefore(importBtn,exportBtn);btn.onclick=open;window.scrapFontData=()=>window.scrapFontPosts?.()||[];
 const view=document.getElementById('view');
 if(view){let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;apply()})}).observe(view,{childList:true,subtree:true})}
-snapshot(state);rerender();setTimeout(reloadCloud,1300);setInterval(()=>{if(window.scrapSync?.active)reloadCloud();else if(activeUser){activeUser=null;state=loadLocal();rerender()}},15000)}
+snapshot(state);rerender();setTimeout(reloadCloud,1300)}
 window.scrapFontApply=apply;window.scrapFontCloudRefresh=reloadCloud;document.addEventListener('DOMContentLoaded',init);
 })();
