@@ -75,7 +75,7 @@ function apply(){
  }
 }
 function rerender(){installFonts();apply()}
-async function reloadCloud(){if(!window.scrapSync?.active){if(activeUser){activeUser=null;state=loadLocal();rerender()}return}if(!window.scrapSync.fontGet||fetching)return;fetching=true;try{const user=await window.scrapSync.fontUser();if(!user)return;if(activeUser!==user){activeUser=user;state=structuredClone(defaults)}const remote=await window.scrapSync.fontGet();state=remote?sanitize(remote):structuredClone(defaults);rerender()}catch(e){console.warn('Font cloud sync:',e.message)}finally{fetching=false}}
+async function reloadCloud(){if(!window.scrapSync?.active){if(activeUser){activeUser=null;state=loadLocal();rerender()}return}if(!window.scrapSync.fontGet||fetching)return;fetching=true;try{const user=await window.scrapSync.fontUser();if(!user)return;if(activeUser!==user){activeUser=user;state=structuredClone(defaults)}const remote=await window.scrapSync.fontGet();state=remote?sanitize(remote):structuredClone(defaults);rerender();if(dialogOpen&&document.getElementById('fontEditAccordion')){drawCustom();initFontEdit();drawDeleteList()}}catch(e){console.warn('Font cloud sync:',e.message)}finally{fetching=false}}
 async function save(){try{if(window.scrapSync?.active){if(!window.scrapSync.fontPut)throw Error('sync.js 파일을 새 버전으로 교체해 주세요.');await window.scrapSync.fontPut(state)}else localStorage.setItem(KEY,JSON.stringify(state));rerender();return true}catch(e){alert('폰트 설정 저장 실패: '+e.message);return false}}
 function chooseFontHTML(prefix){return `<div class="field"><label>선택 폰트</label><select id="${prefix}Font">${state.fonts.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}</select></div><div class="field"><label>굵기</label><select id="${prefix}Weight"></select></div>`}
 function updateWeight(prefix){const f=font(document.getElementById(prefix+'Font')?.value);const el=document.getElementById(prefix+'Weight');if(el)el.innerHTML=f.weights.map(w=>`<option value="${w}">${w}${w===400?' · Regular':w===700?' · Bold':''}</option>`).join('')}
@@ -126,13 +126,18 @@ async function saveCustom(){
  const before=structuredClone(state);state.fonts.push(entry);
  if(await save()){alert('GitHub 폰트가 등록되었습니다.');open()}else state=before;
 }
-function drawCustom(){const el=document.getElementById('fontCustomList');if(el)el.textContent='등록한 사용자 폰트: '+(state.fonts.filter(f=>f.id.startsWith('custom-')).map(f=>f.name).join(', ')||'없음')}
+function customFonts(){return state.fonts.filter(f=>typeof f.id==='string'&&f.id.startsWith('custom-'))}
+function drawCustom(){const el=document.getElementById('fontCustomList');if(el)el.textContent='등록한 사용자 폰트: '+(customFonts().map(f=>f.name).join(', ')||'없음')}
 function initFontEdit(){
  const sel=document.getElementById('fontEditSelect');if(!sel)return;
- sel.innerHTML='<option value="">수정할 폰트를 선택하세요</option>'+state.fonts.filter(f=>f.id.startsWith('custom-')).map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+ const previous=sel.value;
+ const fonts=customFonts();
+ sel.innerHTML='<option value="">수정할 폰트를 선택하세요</option>'+fonts.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
  const options=document.getElementById('fontEditAccordionOptions');
- options.innerHTML=state.fonts.filter(f=>f.id.startsWith('custom-')).map(f=>`<button type="button" class="btn font-edit-option" data-edit-font="${esc(f.id)}">${esc(f.name)}</button>`).join('')||'<p class="hint">등록된 사용자 폰트가 없습니다.</p>';
+ options.innerHTML=fonts.map(f=>`<button type="button" class="btn font-edit-option" data-edit-font="${esc(f.id)}">${esc(f.name)}</button>`).join('')||'<p class="hint">현재 저장소에 등록된 사용자 폰트가 없습니다. 3번에서 등록했는데도 보이지 않는다면 로그인 상태와 클라우드 동기화를 확인해 주세요.</p>';
  options.querySelectorAll('[data-edit-font]').forEach(button=>button.onclick=()=>{sel.value=button.dataset.editFont;document.getElementById('fontEditAccordionLabel').textContent=state.fonts.find(f=>f.id===sel.value)?.name||'수정할 폰트를 선택하세요';document.getElementById('fontEditAccordion').open=false;drawFontEdit()});
+ sel.value=fonts.some(f=>f.id===previous)?previous:'';
+ document.getElementById('fontEditAccordionLabel').textContent=fonts.find(f=>f.id===sel.value)?.name||'등록된 폰트 선택';
  sel.onchange=drawFontEdit;document.getElementById('fontEditSave').onclick=saveFontEdit;drawFontEdit();
 }
 function drawFontEdit(){
@@ -220,24 +225,41 @@ async function saveFontEdit(){
 
 function drawDeleteList(){
  const el=document.getElementById('fontDeleteList');if(!el)return;
- const customs=state.fonts.filter(f=>f.id.startsWith('custom-'));
- if(!customs.length){el.innerHTML='<p class="hint">삭제할 사용자 등록 폰트가 없습니다.</p>';return}
- el.innerHTML=customs.map(f=>{
-  const count=state.rules.filter(r=>r.fontId===f.id).length;
-  const desc=Array.isArray(f.files)&&f.files.length?f.files.length+'개 파일':f.path?'단일 파일':'웹폰트 CSS';
-  return `<div class="font-delete-row"><div><strong>${esc(f.name)}</strong><small>사용 중인 설정 ${count}개</small></div><button type="button" class="btn font-delete-btn" data-delete-font="${esc(f.id)}">삭제</button></div>`
- }).join('');
- el.querySelectorAll('[data-delete-font]').forEach(btn=>btn.onclick=()=>deleteCustomFont(btn.dataset.deleteFont));
+ const fonts=customFonts();
+ if(!fonts.length){el.innerHTML='<p class="hint">현재 저장소에 등록된 사용자 폰트가 없습니다.</p>';return}
+ const oldFont=document.getElementById('fontDeleteFont')?.value||'';
+ const oldWeight=document.getElementById('fontDeleteWeight')?.value||'';
+ el.innerHTML=`<div class="field"><label for="fontDeleteFont">폰트명</label><select id="fontDeleteFont"><option value="">삭제할 폰트를 선택하세요</option>${fonts.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}</select></div><div class="field"><label for="fontDeleteWeight">굵기</label><select id="fontDeleteWeight" disabled><option value="">먼저 폰트를 선택하세요</option></select></div><div class="font-save"><button type="button" class="btn font-delete-btn" id="fontDeleteSelected" disabled>선택된 폰트 삭제</button></div><p class="hint" id="fontDeleteStatus" role="status" aria-live="polite"></p>`;
+ const fontSel=document.getElementById('fontDeleteFont'),weightSel=document.getElementById('fontDeleteWeight'),btn=document.getElementById('fontDeleteSelected');
+ function updateWeights(){
+  const f=customFonts().find(f=>f.id===fontSel.value);
+  weightSel.innerHTML=f?'<option value="all">전체 굵기 (폰트 전체 삭제)</option>'+f.weights.map(w=>`<option value="${w}">${w}</option>`).join(''):'<option value="">먼저 폰트를 선택하세요</option>';
+  weightSel.disabled=!f;btn.disabled=!f;
+  if(f&&[...weightSel.options].some(o=>o.value===oldWeight))weightSel.value=oldWeight;
+ }
+ fontSel.onchange=updateWeights;
+ fontSel.value=fonts.some(f=>f.id===oldFont)?oldFont:'';
+ updateWeights();
+ btn.onclick=()=>deleteCustomFont(fontSel.value,weightSel.value);
 }
-async function deleteCustomFont(id){
- const f=state.fonts.find(x=>x.id===id&&x.id.startsWith('custom-'));if(!f)return;
+async function deleteCustomFont(id,weight='all'){
+ const f=customFonts().find(x=>x.id===id);if(!f)return;
+ const selectedWeight=Number(weight);
+ const multi=Array.isArray(f.files)&&f.files.length>=2;
+ const canRemoveWeight=weight!=='all'&&multi&&f.files.some(x=>x.weight===selectedWeight);
+ const whole=weight==='all'||!canRemoveWeight;
  const affected=state.rules.filter(r=>r.fontId===id).length;
- const msg=`등록 폰트 “${f.name}”을(를) 삭제하시겠습니까?\n\n이 폰트를 사용하는 설정 ${affected}개도 해제됩니다. 해당 범위에는 남아 있는 다른 폰트 설정이 적용됩니다.\nGitHub의 실제 폰트 파일은 삭제되지 않습니다.`;
- if(!confirm(msg))return;
+ const message=whole?`등록 폰트 “${f.name}” 전체를 삭제하시겠습니까?\n사용 중인 설정 ${affected}개도 해제됩니다.`:`“${f.name}”의 ${selectedWeight} 굵기 파일만 등록 목록에서 삭제하시겠습니까?\n남은 굵기는 유지됩니다.`;
+ if(!confirm(message+'\nGitHub 저장소의 실제 폰트 파일은 삭제되지 않습니다.'))return;
  const before=structuredClone(state);
- state.fonts=state.fonts.filter(x=>x.id!==id);
- state.rules=state.rules.filter(r=>r.fontId!==id);
- if(await save()){alert('등록된 폰트를 삭제했습니다.');open()}else{state=before;rerender()}
+ if(whole){state.fonts=state.fonts.filter(x=>x.id!==id);state.rules=state.rules.filter(r=>r.fontId!==id)}
+ else{
+  f.files=f.files.filter(x=>x.weight!==selectedWeight);
+  f.weights=validWeights(f.files.map(x=>x.weight));
+  if(f.files.length===1){f.path=f.files[0].path;delete f.files;}
+  for(const r of state.rules)if(r.fontId===id&&!f.weights.includes(Number(r.weight)))r.weight=f.weights.includes(400)?400:f.weights[0];
+ }
+ if(await save()){alert('선택한 폰트 정보를 삭제했습니다.');open()}else{state=before;rerender()}
 }
 function style(){const s=document.createElement('style');s.textContent=`.font-dialog{width:min(760px,100%)}.font-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.font-head h2{margin:0}.font-section{padding:15px 0}.font-section h3{font-size:16px;margin:0 0 16px}.font-radio{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:14px}.font-radio label{display:flex;gap:5px;align-items:center}.font-save{display:flex;justify-content:center;margin:18px 0 4px}.font-post-results{max-height:260px;overflow:auto;border:1px solid #e3e7f0;border-radius:10px}.font-post-option{display:flex;align-items:start;gap:10px;padding:10px 12px;border-bottom:1px solid #edf0f5}.font-post-option:last-child{border:0}.font-post-option span{display:grid;gap:4px}.font-post-option small{color:#7d8596}.font-result-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.font-result-head .btn{font-size:12px}.font-count-accordion{border:1px solid #e3e7f0;border-radius:10px;padding:12px;margin-bottom:14px}.font-count-accordion summary{cursor:pointer;font-weight:600}.font-count-options{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.font-multi-row{border:1px solid #e3e7f0;border-radius:10px;padding:12px;margin:10px 0}.font-multi-row strong{display:block;margin-bottom:10px}.font-edit-options{display:grid;gap:7px;margin-top:12px}.font-edit-option{text-align:left;width:100%;justify-content:flex-start}.font-delete-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e3e7f0;border-radius:10px;margin:8px 0}.font-delete-row>div{display:grid;gap:5px;min-width:0;overflow-wrap:anywhere}.font-delete-row small{color:#7d8596}.font-delete-btn{flex-shrink:0}.font-dialog [hidden]{display:none!important}.font-dialog hr{border:0;border-top:1px solid #e4e8f0;margin:8px 0}`;document.head.append(s)}
 function init(){style();const exportBtn=document.getElementById('exportBtn');if(!exportBtn)return;const btn=document.createElement('button');btn.className='btn';btn.id='fontSettingsBtn';btn.textContent='font ver.';const importBtn=document.getElementById('importBtn');exportBtn.textContent='Backup_Export';if(importBtn)importBtn.textContent='Backup_Upload';exportBtn.parentNode.insertBefore(btn,exportBtn);if(importBtn)exportBtn.parentNode.insertBefore(importBtn,exportBtn);btn.onclick=open;window.scrapFontData=()=>window.scrapFontPosts?.()||[];
