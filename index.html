@@ -26,6 +26,11 @@
 .note .note-cover img{display:block;width:100%;height:100%;object-fit:cover;cursor:zoom-in}
 .note .note-cover .cover-count{position:absolute;right:4px;bottom:4px;border-radius:5px;padding:2px 5px;background:#1d2439bb;color:white;font-size:10px;pointer-events:none}
 @media(max-width:760px){.note.compact,.note.titleonly{grid-template-columns:1fr}.note .note-cover{flex-basis:72px;width:72px;height:72px}}
+
+/* 헤더 3줄 전용 색상: 파랑 / 블루그레이 / 블랙 */
+.top #archiveEyebrow{color:#465CC7;}
+.top #archiveTitle{color:#718096;}
+.top #archivePeriod{color:#202735;}
 </style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="./sync-config.js"></script><script src="./sync.js"></script><script>
 'use strict';
 let igSearchQuery='',igSearchActive=false,igAdvanced={folder:'',year:'',keyword:''},igSearchLayout='list';
