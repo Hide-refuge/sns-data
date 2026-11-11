@@ -33,7 +33,7 @@
 .top #archivePeriod{color:#151922;font-size:14px;}
 /* Font category accordion: category > font selection */
 .font-category-accordion{border:1px solid #dce0e8;border-radius:10px;background:#fff;margin-top:6px}
-.font-category-accordion>summary{cursor:pointer;padding:12px 14px;list-style:revert}
+.font-category-accordion>summary{cursor:pointer;padding:12px 14px;list-style:none!important}
 .font-category-accordion>div{display:flex;flex-wrap:wrap;gap:7px;padding:12px;border-top:1px solid #e8ebf2}
 .font-category-option[aria-pressed="true"]{background:#4b60d0;color:white}
 
@@ -47,7 +47,7 @@
 
 /* Initial home search: right side of the platform heading */
 #view.home-search-idle{position:relative}
-#view.home-search-idle .home-search{position:absolute;top:20px;right:0;width:49%;margin:0;z-index:1}
+#view.home-search-idle .home-search{position:absolute;top:38px;right:0;width:49%;margin:0;z-index:1}
 #view.home-search-idle .home-search input{height:44px;padding:10px 14px}
 #view.home-search-idle #homeSearchBody .section-head{min-height:76px;padding-top:12px}
 .home-search-tools select{padding-left:14px;padding-right:30px;min-width:calc(9em + 20px)}
@@ -73,6 +73,30 @@ details > summary::before {
   border-top: 5px solid currentColor;
   margin-right: 7px;
   vertical-align: middle;
+}
+
+/* Strong override for Safari and custom font-settings accordion markers */
+.font-category-accordion > summary,
+.font-count-accordion > summary,
+.font-restore-accordion > summary,
+.font-edit-accordion > summary,
+details > summary {list-style:none!important;list-style-type:none!important;}
+.font-category-accordion > summary::-webkit-details-marker,
+.font-count-accordion > summary::-webkit-details-marker,
+.font-restore-accordion > summary::-webkit-details-marker,
+details > summary::-webkit-details-marker {display:none!important;}
+.font-category-accordion > summary::marker,
+.font-count-accordion > summary::marker,
+.font-restore-accordion > summary::marker,
+details > summary::marker {content:''!important;font-size:0!important;}
+.font-category-accordion > summary::before,
+.font-count-accordion > summary::before,
+.font-restore-accordion > summary::before,
+details > summary::before {
+ content:''!important;display:inline-block!important;width:0!important;height:0!important;
+ border-left:3px solid transparent!important;border-right:3px solid transparent!important;
+ border-top:4px solid currentColor!important;border-bottom:0!important;
+ margin-right:7px!important;vertical-align:middle!important;transform:none!important;
 }
 </style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="./sync-config.js"></script><script src="./sync.js?v=egress-usage-display-05"></script><script>
 'use strict';
