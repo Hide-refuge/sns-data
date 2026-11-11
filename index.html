@@ -47,11 +47,33 @@
 
 /* Initial home search: right side of the platform heading */
 #view.home-search-idle{position:relative}
-#view.home-search-idle .home-search{position:absolute;top:0;right:0;width:49%;margin:0;z-index:1}
+#view.home-search-idle .home-search{position:absolute;top:20px;right:0;width:49%;margin:0;z-index:1}
 #view.home-search-idle .home-search input{height:44px;padding:10px 14px}
 #view.home-search-idle #homeSearchBody .section-head{min-height:76px;padding-top:12px}
 .home-search-tools select{padding-left:14px;padding-right:30px;min-width:calc(9em + 20px)}
 @media(max-width:760px){#view.home-search-idle .home-search{position:static;width:100%;margin:0 0 14px}#view.home-search-idle #homeSearchBody .section-head{min-height:0;padding-top:0}}
+
+/* All expandable accordions: compact downward triangle */
+details > summary {
+  list-style: none !important;
+}
+details > summary::-webkit-details-marker {
+  display: none !important;
+}
+details > summary::marker {
+  content: "" !important;
+}
+details > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 5px solid currentColor;
+  margin-right: 7px;
+  vertical-align: middle;
+}
 </style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="./sync-config.js"></script><script src="./sync.js?v=egress-usage-display-05"></script><script>
 'use strict';
 let igSearchQuery='',igSearchActive=false,igAdvanced={folder:'',year:'',keyword:''},igSearchLayout='list';
