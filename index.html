@@ -99,7 +99,7 @@ details > summary::before {
  margin-right:7px!important;vertical-align:middle!important;transform:none!important;
 }
 
-.folders .folder{touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.folders .folder{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .folders .folder.folder-dragging{opacity:.65;outline:2px solid #185DFF;outline-offset:2px;z-index:2;position:relative;touch-action:none}
 .folders .folder.folder-drop-target{box-shadow:inset 0 0 0 3px #185DFF}
 .folders.folder-reordering{touch-action:none}
@@ -210,73 +210,90 @@ async function exportBackup(){
 }
 async function importBackup(file){if(!file)return;try{if(file.size>80*1024*1024)throw Error('파일이 80MB를 초과합니다.');const data=JSON.parse(await file.text());if(data.version!==1||!Array.isArray(data.folders)||!Array.isArray(data.posts))throw Error('지원하지 않는 백업 형식입니다.');if(!confirm(`폴더 ${data.folders.length}개와 스크랩 ${data.posts.length}개를 가져오시겠습니까? 같은 ID는 덮어씁니다.`))return;for(const f of data.folders){if(typeof f.id==='string'&&platforms[f.platform]&&typeof f.name==='string')await put('folders',f)}for(const p of data.posts){if(typeof p.id==='string'&&platforms[p.platform]&&validUrl(p.url)&&typeof p.folderId==='string'&&Array.isArray(p.images))await put('posts',p)}await refresh();alert('가져오기가 완료되었습니다.')}catch(err){alert('가져오기 실패: '+err.message)}finally{$('importFile').value=''}}
 
-/* Long-press folder ordering: 450ms hold, drag to another folder, release to save. */
+/* Folder reorder: dedicated touch drag with fixed floating preview. */
 (()=>{
- let timer=null,drag=null,suppressUntil=0;
- const card=e=>e.target.closest?.('.folders .folder[data-folder]');
- function clear(){if(timer)clearTimeout(timer);timer=null}
- document.addEventListener('pointerdown',e=>{
-   const el=card(e);if(!el||e.button!==0)return;
-   clear();
-   const x=e.clientX,y=e.clientY,pointerId=e.pointerId;
-   timer=setTimeout(()=>{
-     timer=null;
-     const parent=el.closest('.folders');if(!parent)return;
-     drag={el,parent,pointerId,target:null,platform:route.platform};
-     el.classList.add('folder-dragging');parent.classList.add('folder-reordering');
-     try{el.setPointerCapture(pointerId)}catch{}
-     suppressUntil=Date.now()+1200;
-   },450);
-   const abort=ev=>{if(ev.pointerId===pointerId&&!drag)clear()};
-   el.addEventListener('pointercancel',abort,{once:true});
- },true);
- document.addEventListener('pointermove',e=>{
-   if(!drag){if(timer&&e.buttons===0)clear();return}
-   if(e.pointerId!==drag.pointerId)return;
-   e.preventDefault();
-   const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.folders .folder[data-folder]');
-   if(drag.target&&drag.target!==target)drag.target.classList.remove('folder-drop-target');
-   drag.target=target&&target!==drag.el?target:null;
-   drag.target?.classList.add('folder-drop-target');
- },{passive:false,capture:true});
- async function finish(e){
-   clear();
-   if(!drag||e.pointerId!==drag.pointerId)return;
-   const d=drag;drag=null;
-   d.el.classList.remove('folder-dragging');
-   d.parent.classList.remove('folder-reordering');
+ let pending=null,active=null,blockClickUntil=0;
+ const card=node=>node?.closest?.('.folders .folder[data-folder]');
+ const clearPending=()=>{if(pending?.timer)clearTimeout(pending.timer);pending=null};
+ function startDrag(el,x,y){
+   if(!el.isConnected)return;
+   const box=el.getBoundingClientRect();
+   const ghost=el.cloneNode(true);
+   ghost.removeAttribute('data-folder');
+   ghost.classList.add('folder-drag-ghost');
+   Object.assign(ghost.style,{position:'fixed',left:box.left+'px',top:box.top+'px',width:box.width+'px',height:box.height+'px',margin:'0',zIndex:'99999',pointerEvents:'none',transform:'none',transition:'none',opacity:'.95',boxShadow:'0 12px 30px #1d33603b',background:'#fff'});
+   document.body.appendChild(ghost);
+   active={el,ghost,container:el.closest('.folders'),dx:x-box.left,dy:y-box.top,target:null};
+   el.classList.add('folder-dragging');
+   blockClickUntil=Date.now()+1800;
+ }
+ function moveDrag(x,y){
+   if(!active)return;
+   const d=active;
+   d.ghost.style.left=(x-d.dx)+'px';
+   d.ghost.style.top=(y-d.dy)+'px';
    d.target?.classList.remove('folder-drop-target');
-   suppressUntil=Date.now()+1200;
-   if(e.type==='pointercancel'||!d.target||route.platform!==d.platform)return;
-   const nodes=[...d.parent.querySelectorAll('.folder[data-folder]')];
-   const from=nodes.indexOf(d.el),to=nodes.indexOf(d.target);
+   const hovered=card(document.elementFromPoint(x,y));
+   d.target=hovered&&hovered!==d.el&&hovered.closest('.folders')===d.container?hovered:null;
+   d.target?.classList.add('folder-drop-target');
+ }
+ async function finishDrag(cancel){
+   clearPending();
+   if(!active)return;
+   const d=active;active=null;blockClickUntil=Date.now()+1800;
+   d.ghost.remove();d.el.classList.remove('folder-dragging');
+   d.target?.classList.remove('folder-drop-target');
+   if(cancel||!d.target)return;
+   const ids=[...d.container.querySelectorAll('.folder[data-folder]')].map(n=>n.dataset.folder);
+   const from=ids.indexOf(d.el.dataset.folder),to=ids.indexOf(d.target.dataset.folder);
    if(from<0||to<0||from===to)return;
-   const ids=nodes.map(n=>n.dataset.folder);
    ids.splice(to,0,ids.splice(from,1)[0]);
-   const updates=ids.map((id,i)=>({record:folders.find(f=>f.id===id),sortOrder:i}));
    try{
-     for(const item of updates){
-       if(!item.record)continue;
-       if(item.record.sortOrder===item.sortOrder)continue;
-       await put('folders',{...item.record,sortOrder:item.sortOrder});
+     for(let i=0;i<ids.length;i++){
+       const record=folders.find(f=>f.id===ids[i]);
+       if(record&&record.sortOrder!==i)await put('folders',{...record,sortOrder:i});
      }
      await refresh();
-   }catch(err){
-     alert('폴더 순서 저장 실패: '+(err?.message||err));
-     await refresh();
-   }
+   }catch(err){alert('폴더 순서 저장 실패: '+(err?.message||err));await refresh()}
  }
- document.addEventListener('pointerup',finish,true);
- document.addEventListener('pointercancel',finish,true);
- document.addEventListener('pointermove',e=>{
-   if(timer&&!drag&&e.buttons===0)clear();
+ document.addEventListener('touchstart',e=>{
+   if(active||e.touches.length!==1)return;
+   const el=card(e.target);if(!el)return;
+   clearPending();
+   const t=e.touches[0],x=t.clientX,y=t.clientY;
+   const timer=setTimeout(()=>{if(pending?.timer===timer){pending=null;startDrag(el,x,y)}},420);
+   pending={timer,x,y};
+ },{capture:true,passive:true});
+ document.addEventListener('touchmove',e=>{
+   const t=e.touches[0];if(!t)return;
+   if(active){if(e.cancelable)e.preventDefault();moveDrag(t.clientX,t.clientY)}
+   else if(pending&&Math.hypot(t.clientX-pending.x,t.clientY-pending.y)>9)clearPending();
+ },{capture:true,passive:false});
+ document.addEventListener('touchend',e=>{
+   if(active){
+     const t=e.changedTouches[0];if(t)moveDrag(t.clientX,t.clientY);
+     void finishDrag(false);
+   }else clearPending();
+ },{capture:true});
+ document.addEventListener('touchcancel',()=>{if(active)void finishDrag(true);else clearPending()},{capture:true});
+ document.addEventListener('pointerdown',e=>{
+   if(e.pointerType==='touch'||e.button!==0||active)return;
+   const el=card(e.target);if(!el)return;
+   clearPending();
+   const x=e.clientX,y=e.clientY;
+   const timer=setTimeout(()=>{if(pending?.timer===timer){pending=null;startDrag(el,x,y)}},420);
+   pending={timer,x,y};
  },true);
+ document.addEventListener('pointermove',e=>{
+   if(e.pointerType==='touch')return;
+   if(active){moveDrag(e.clientX,e.clientY);e.preventDefault()}
+   else if(pending&&Math.hypot(e.clientX-pending.x,e.clientY-pending.y)>9)clearPending();
+ },true);
+ document.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'){if(active)void finishDrag(false);else clearPending()}},true);
+ document.addEventListener('pointercancel',e=>{if(e.pointerType!=='touch'){if(active)void finishDrag(true);else clearPending()}},true);
  document.addEventListener('click',e=>{
-   if(Date.now()<suppressUntil&&e.target.closest?.('.folders .folder')){
-     e.preventDefault();e.stopImmediatePropagation();
-   }
+   if(Date.now()<blockClickUntil&&card(e.target)){e.preventDefault();e.stopImmediatePropagation()}
  },true);
 })();
-
 document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder),related=posts.filter(p=>p.folderId===f.id);if(confirm(`'${f.name}' 폴더와 스크랩 ${related.length}개를 모두 삭제하시겠습니까?`)){for(const p of related)await del('posts',p.id);await del('folders',f.id);route.folder=null;await refresh()}}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){if(confirm('이 스크랩을 삭제하시겠습니까?')){await del('posts',t.dataset.delpost);await refresh()}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;await put('folders',{id:uid(),platform:route.platform,name,description,...style,createdAt:today()});await refresh()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);openDB().then(d=>{db=d;window.scrapRefresh=refresh;refresh()}).catch(err=>{$('view').innerHTML=`<div class="warning">브라우저 저장소를 열지 못했습니다. 일반 브라우저에서 열거나 로컬 서버를 이용하세요. ${escapeHtml(err.message)}</div>`});
 </script><script src="./font-settings.js?v=font-category-cachefix-20261111-02"></script><script src="./image-gallery.js?v=gallery-cover-first-05"></script></body></html>
