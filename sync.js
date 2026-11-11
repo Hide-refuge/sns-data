@@ -9,6 +9,24 @@
   const $ = id => document.getElementById(id);
   const msg = (s) => {if($('syncStatus')) $('syncStatus').textContent=s;};
   const errText = e => (e && e.message) || String(e);
+  // Browser-local estimate of received database JSON, not official Supabase Egress.
+  const USAGE_KEY='scrap-sync-usage-v1';
+  const day=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+  const bytes=value=>new TextEncoder().encode(JSON.stringify(value??null)).byteLength;
+  const usage=()=>{try{const v=JSON.parse(localStorage.getItem(USAGE_KEY)||'{}');return v.day===day()?v:{day:day(),total:0,auto:0,manual:0,login:0}}catch{return {day:day(),total:0,auto:0,manual:0,login:0}}};
+  const size=n=>n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(2)} MB`;
+  let readReason='login';
+  function drawUsage(){
+    const mode=$('syncModeInfo'),amount=$('syncUsageInfo');
+    if(mode)mode.textContent='동기화 설정: 수동 동기화 (자동 반복 조회 없음 · 로그인 시 최초 조회)';
+    if(amount){const v=usage();amount.textContent=`오늘 조회 데이터(이 브라우저 추정): ${size(v.total)} · 자동 ${size(v.auto)} · 수동 ${size(v.manual)} · 로그인 ${size(v.login)}`;}
+  }
+  function trackRead(value){
+    const v=usage(),n=bytes(value);v.total+=n;v[readReason]=(v[readReason]||0)+n;
+    try{localStorage.setItem(USAGE_KEY,JSON.stringify(v))}catch{}drawUsage();
+  }
+  sync.usageRefresh=drawUsage;
+
   const localAll = store => new Promise((resolve,reject)=>{
     const req=indexedDB.open('personal-scrap-hub-v1',1);
     req.onerror=()=>reject(req.error);
@@ -24,6 +42,7 @@
     const out=[];let from=0;
     while(true){
       const batch=errorCheck(await client.from(table[store]).select('id,data').eq('user_id',user.id).order('id').range(from,from+499));
+      trackRead(batch);
       out.push(...batch.map(x=>x.data));
       if(batch.length<500)break;
       from+=500;
@@ -35,7 +54,7 @@
   sync.fontGet=async()=>{
     if(!sync.active)throw Error('로그인이 필요합니다.');
     const {data,error}=await client.from('scrap_font_settings').select('data').eq('user_id',user.id).maybeSingle();
-    if(error)throw error;return data?.data||null;
+    if(error)throw error;trackRead(data);return data?.data||null;
   };
   sync.fontPut=async value=>{
     if(!sync.active)throw Error('로그인이 필요합니다.');
@@ -60,7 +79,7 @@
     if(document.querySelector('#modalRoot .overlay') || document.querySelector('#folderForm:focus-within')){
       msg('편집 창을 닫은 뒤 지금 동기화를 눌러 주세요.');return;
     }
-    busy=true;
+    busy=true;readReason='manual';
     const button=$('syncNow');if(button)button.disabled=true;
     try{
       await window.scrapRefresh?.();
@@ -69,12 +88,12 @@
       lastSync=Date.now();
       msg('클라우드 동기화 완료 · '+new Date(lastSync).toLocaleTimeString('ko-KR')+' · 자동 반복 조회 꺼짐');
     }catch(e){msg('동기화 실패: '+errText(e));}
-    finally{busy=false;if(button?.isConnected)button.disabled=false;}
+    finally{busy=false;readReason='login';if(button?.isConnected)button.disabled=false;drawUsage();}
   }
   async function setSession(session){
     user=session?.user||null;sync.active=!!user;
     sync.lastSignature=null;
-    draw();
+    draw();readReason='login';drawUsage();
     if(sync.active){setTimeout(()=>window.scrapFontCloudRefresh?.(),0);msg('로그인됨: '+user.email+' · 클라우드 데이터 불러오는 중');await window.scrapRefresh?.();}
     else{setTimeout(()=>window.scrapFontCloudRefresh?.(),0);msg(valid?'로그아웃 상태 · 이 기기의 IndexedDB 사용':'연결 설정 필요: sync-config.js의 Publishable key를 입력하세요.');await window.scrapRefresh?.();}
   }
