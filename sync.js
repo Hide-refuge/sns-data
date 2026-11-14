@@ -59,7 +59,7 @@ async function upload(next){
  if(!loaded)throw Error('클라우드 데이터를 아직 불러오지 못했습니다.');
  await checkRevision();
  const data=validate({...next,modifiedAt:stamp()});
- if(bytes(data)>4*1024*1024)throw Error('Drive 데이터가 4MB를 초과했습니다. 대용량 이미지용 분할 업로드 기능이 필요합니다. 기존 Drive 데이터는 변경하지 않았습니다.');
+ if(bytes(data)>20*1024*1024)throw Error('Drive 데이터가 20MB를 초과했습니다. 이미지 분리 저장 방식이 필요합니다. 기존 Drive 데이터는 변경하지 않았습니다.');
  const boundary='scraphub_'+Math.random().toString(36).slice(2);
  const meta=remoteId?{}:{name:FILE,parents:['appDataFolder'],mimeType:'application/json'};
  const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(data)+'\r\n--'+boundary+'--';
@@ -103,10 +103,34 @@ async function migrateLocal(){
  });await window.scrapRefresh?.();alert('로컬 자료 이전 완료. 원본 IndexedDB는 유지됩니다.')}
  catch(e){alert('이전 실패: '+errorText(e))}
 }
+function parseMigrationFile(raw){
+ if(!raw||raw.format!=='curated-by-hide-drive-migration'||raw.version!==1||!raw.tables)throw Error('Curated by Hide 통합 백업 JSON 형식이 아닙니다.');
+ const folders=raw.tables.scrap_folders,posts=raw.tables.scrap_posts,fonts=raw.tables.scrap_font_settings;
+ if(!Array.isArray(folders)||!Array.isArray(posts)||!Array.isArray(fonts)||fonts.length!==1)throw Error('백업에 필요한 폴더/스크랩/폰트 설정 테이블이 없습니다.');
+ const unpack=(row)=>{const v=typeof row?.data==='string'?JSON.parse(row.data):row?.data;if(!v||typeof v!=='object'||Array.isArray(v))throw Error('백업 행의 data 항목이 잘못되었습니다.');return v};
+ const folderData=folders.map(unpack),postData=posts.map(unpack),fontData=unpack(fonts[0]);
+ const unique=(arr,name)=>{const ids=arr.map(x=>x.id);if(ids.some(x=>typeof x!=='string'||!x))throw Error(name+' ID가 잘못되었습니다.');if(new Set(ids).size!==ids.length)throw Error(name+' ID가 중복되었습니다.')};
+ unique(folderData,'폴더');unique(postData,'스크랩');
+ if(!Array.isArray(fontData.fonts)||!fontData.rules||typeof fontData.rules!=='object')throw Error('폰트 설정의 형식이 올바르지 않습니다.');
+ return validate({version:1,folders:folderData,posts:postData,fontSettings:fontData,modifiedAt:null});
+}
+async function importMigration(event){
+ const input=event.target,file=input.files?.[0];input.value='';if(!file||!sync.active)return;
+ if(file.size>25*1024*1024){alert('선택한 JSON 파일이 25MB를 초과합니다.');return}
+ try{
+  const parsed=parseMigrationFile(JSON.parse(await file.text()));
+  const summary=`복원 파일: 폴더 ${parsed.folders.length}개, 스크랩 ${parsed.posts.length}개, 폰트 ${parsed.fontSettings.fonts.length}개\n현재 Drive: 폴더 ${snapshot.folders.length}개, 스크랩 ${snapshot.posts.length}개\n\n복원하면 현재 Google Drive 저장 파일의 폴더·스크랩·폰트 설정을 이 백업으로 교체합니다. 기존 Supabase와 원본 JSON은 유지됩니다.\n\n계속하시겠습니까?`;
+  if(!confirm(summary))return;
+  if(!confirm('최종 확인: Google Drive에 이미 저장된 데이터는 이 백업으로 교체됩니다. 진행하시겠습니까?'))return;
+  await enqueue(()=>upload(parsed));await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();
+  msg('JSON 복원 완료 · 폴더 '+snapshot.folders.length+'개 · 스크랩 '+snapshot.posts.length+'개');
+  alert('Google Drive 복원 완료. 폴더·스크랩·폰트 설정을 화면에서 확인해 주세요.');
+ }catch(e){msg('JSON 복원 실패: '+errorText(e));alert('복원 실패: '+errorText(e))}
+}
 function draw(){const root=$('syncControls');if(!root)return;
  if(!cfg.clientId){root.innerHTML='<p class="warning">Google OAuth 클라이언트 ID 설정이 없습니다.</p>';return}
- if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
- $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('syncLogout').onclick=()=>{token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
+ if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="importMigration">통합 JSON 복원</button><input type="file" id="migrationFile" accept=".json,application/json" style="display:none"><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
+ $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
  }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요. 최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
  $('googleLogin').onclick=()=>{
  if(!tokenClient){alert('Google 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return}
