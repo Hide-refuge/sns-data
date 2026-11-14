@@ -12,6 +12,17 @@ let token='',tokenClient=null,remoteId=null,revision=null,loaded=false,busy=fals
 // Only a logout preference is stored; Google access tokens are never persisted.
 const LOGOUT_KEY='curated-drive-manual-logout-v1';
 let silentAttempt=false;
+// Session-only token cache: survives refresh in this tab, never localStorage.
+const TOKEN_KEY='curated-drive-token-session-v2';
+function saveSessionToken(value,expiresIn){
+ try{const ttl=Math.min(Math.max(Number(expiresIn)||3000,60),3600);sessionStorage.setItem(TOKEN_KEY,JSON.stringify({token:value,expiresAt:Date.now()+ttl*1000-60000}));}catch{}
+}
+function readSessionToken(){
+ try{const data=JSON.parse(sessionStorage.getItem(TOKEN_KEY)||'null');if(data?.token&&Date.now()<data.expiresAt)return data.token;}catch{}
+ clearSessionToken();return '';
+}
+function clearSessionToken(){try{sessionStorage.removeItem(TOKEN_KEY)}catch{}}
+
 const loggedOutHere=()=>{try{return sessionStorage.getItem(LOGOUT_KEY)==='1'}catch{return false}};
 const setLoggedOutHere=value=>{try{if(value)sessionStorage.setItem(LOGOUT_KEY,'1');else sessionStorage.removeItem(LOGOUT_KEY)}catch{}};
 let snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
@@ -135,7 +146,7 @@ async function importMigration(event){
 function draw(){const root=$('syncControls');if(!root)return;
  if(!cfg.clientId){root.innerHTML='<p class="warning">Google OAuth 클라이언트 ID 설정이 없습니다.</p>';return}
  if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="importMigration">통합 JSON 복원</button><input type="file" id="migrationFile" accept=".json,application/json" style="display:none"><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
- $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
+ $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);clearSessionToken();token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
  }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요. 최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
  $('googleLogin').onclick=()=>{
  if(!tokenClient){alert('Google 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return}
@@ -151,9 +162,10 @@ async function onToken(response){
  }
  if(!response.access_token){msg('Google 인증 토큰을 받지 못했습니다. 다시 로그인해 주세요.');return}
  silentAttempt=false;setLoggedOutHere(false);
+ saveSessionToken(response.access_token,response.expires_in);
  token=response.access_token;sync.active=true;loaded=false;draw();msg('Google Drive 데이터를 불러오는 중…');
  try{await download();await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();msg('Google Drive 연결됨 · 폴더 '+snapshot.folders.length+'개 · 스크랩 '+snapshot.posts.length+'개')}
- catch(e){sync.active=false;token='';loaded=false;draw();msg('연결 실패: '+errorText(e));alert('Google Drive 연결 실패: '+errorText(e))}
+ catch(e){sync.active=false;token='';loaded=false;clearSessionToken();draw();msg('연결 실패: '+errorText(e));alert('Google Drive 연결 실패: '+errorText(e))}
 }
 function initGIS(){
  if(!window.google?.accounts?.oauth2){msg('Google 로그인 라이브러리를 불러오지 못했습니다.');return}
@@ -167,11 +179,16 @@ function initGIS(){
   }
  });
  draw();
- if(loggedOutHere()){msg('이 탭에서 로그아웃했습니다. 다시 연결하려면 Google 로그인 버튼을 눌러 주세요.');return}
- // Browser may block a token request without user interaction. In that case, manual login remains available.
- silentAttempt=true;msg('Google Drive 자동 연결을 시도하는 중…');
- try{tokenClient.requestAccessToken({prompt:''})}
- catch(e){silentAttempt=false;draw();msg('자동 연결을 완료하지 못했습니다. Google 로그인 버튼을 눌러 주세요.')} 
+ if(loggedOutHere()){clearSessionToken();msg('이 탭에서 로그아웃했습니다. 다시 연결하려면 Google 로그인 버튼을 눌러 주세요.');return}
+ const restored=readSessionToken();
+ if(restored){
+  token=restored;sync.active=true;draw();msg('이 탭의 Google Drive 연결을 복원하는 중…');
+  (async()=>{try{await download();await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();msg('Google Drive 연결 복원됨 · 폴더 '+snapshot.folders.length+'개 · 스크랩 '+snapshot.posts.length+'개')}
+   catch(e){token='';sync.active=false;loaded=false;clearSessionToken();draw();msg('세션이 만료되었거나 연결이 실패했습니다. Google 로그인 버튼을 눌러 주세요.')}})();
+  return;
+ }
+ // Safari may reject background token requests. Do not open an unwanted login popup.
+ msg('Google Drive 연결 준비 완료 · Google 로그인 버튼을 눌러 주세요.');
 }
 function init(){
  if(typeof window.scrapRefresh!=='function'){setTimeout(init,100);return}
