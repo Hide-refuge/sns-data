@@ -1,150 +1,137 @@
-/* SNS 스크랩 허브 Supabase 동기화 모듈. 기존 IndexedDB는 로그아웃 시 그대로 사용됩니다. */
-(() => {
-  'use strict';
-  const config = window.SCRAP_SUPABASE_CONFIG || {};
-  const table = {folders:'scrap_folders',posts:'scrap_posts'};
-  const valid = /^https:\/\//.test(config.url||'') && /^(sb_publishable_|eyJ)/.test(config.publishableKey||'');
-  let client=null, user=null, busy=false, lastSync=0;
-  const sync={active:false}; window.scrapSync=sync;
-  const $ = id => document.getElementById(id);
-  const msg = (s) => {if($('syncStatus')) $('syncStatus').textContent=s;};
-  const errText = e => (e && e.message) || String(e);
-  // Browser-local estimate of received database JSON, not official Supabase Egress.
-  const USAGE_KEY='scrap-sync-usage-v1';
-  const day=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
-  const bytes=value=>new TextEncoder().encode(JSON.stringify(value??null)).byteLength;
-  const usage=()=>{try{const v=JSON.parse(localStorage.getItem(USAGE_KEY)||'{}');return v.day===day()?v:{day:day(),total:0,auto:0,manual:0,login:0}}catch{return {day:day(),total:0,auto:0,manual:0,login:0}}};
-  const size=n=>n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(2)} MB`;
-  let readReason='login';
-  function drawUsage(){
-    const mode=$('syncModeInfo'),amount=$('syncUsageInfo');
-    if(mode)mode.textContent='동기화 설정: 수동 동기화 (자동 반복 조회 없음 · 로그인 시 최초 조회)';
-    if(amount){const v=usage();amount.textContent=`오늘 조회 데이터(이 브라우저 추정): ${size(v.total)} · 자동 ${size(v.auto)} · 수동 ${size(v.manual)} · 로그인 ${size(v.login)}`;}
-  }
-  function trackRead(value){
-    const v=usage(),n=bytes(value);v.total+=n;v[readReason]=(v[readReason]||0)+n;
-    try{localStorage.setItem(USAGE_KEY,JSON.stringify(v))}catch{}drawUsage();
-  }
-  sync.usageRefresh=drawUsage;
-
-  const localAll = store => new Promise((resolve,reject)=>{
-    const req=indexedDB.open('personal-scrap-hub-v1',1);
-    req.onerror=()=>reject(req.error);
-    req.onsuccess=()=>{
-      const d=req.result;
-      const tx=d.transaction(store,'readonly');const r=tx.objectStore(store).getAll();
-      r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
-      tx.oncomplete=()=>d.close();
-    };
-  });
-  function errorCheck({error,data}){if(error)throw error;return data;}
-  async function fetchAll(store){
-    const out=[];let from=0;
-    while(true){
-      const batch=errorCheck(await client.from(table[store]).select('id,data').eq('user_id',user.id).order('id').range(from,from+499));
-      trackRead(batch);
-      out.push(...batch.map(x=>x.data));
-      if(batch.length<500)break;
-      from+=500;
-    }
-    return out;
-  }
-  // Font settings use their own RLS-protected table, without touching scrap data.
-  sync.fontUser=async()=>user?.id||null;
-  sync.fontGet=async()=>{
-    if(!sync.active)throw Error('로그인이 필요합니다.');
-    const {data,error}=await client.from('scrap_font_settings').select('data').eq('user_id',user.id).maybeSingle();
-    if(error)throw error;trackRead(data);return data?.data||null;
-  };
-  sync.fontPut=async value=>{
-    if(!sync.active)throw Error('로그인이 필요합니다.');
-    errorCheck(await client.from('scrap_font_settings').upsert({user_id:user.id,data:value,updated_at:new Date().toISOString()},{onConflict:'user_id'}));
-  };
-  sync.getAll=async store=>{
-    if(!sync.active)throw Error('로그인되지 않았습니다.');
-    return fetchAll(store);
-  };
-  sync.put=async(store,record)=>{
-    if(!sync.active)throw Error('로그인되지 않았습니다.');
-    errorCheck(await client.from(table[store]).upsert({id:record.id,user_id:user.id,data:record,updated_at:new Date().toISOString()},{onConflict:'user_id,id'}));
-    return record.id;
-  };
-  sync.del=async(store,id)=>{
-    if(!sync.active)throw Error('로그인되지 않았습니다.');
-    errorCheck(await client.from(table[store]).delete().eq('user_id',user.id).eq('id',id));
-  };
-  // Egress 절감: 사용자 요청 시에만 클라우드 전체 데이터를 한 번 조회합니다.
-  async function update(){
-    if(!sync.active||busy)return;
-    if(document.querySelector('#modalRoot .overlay') || document.querySelector('#folderForm:focus-within')){
-      msg('편집 창을 닫은 뒤 지금 동기화를 눌러 주세요.');return;
-    }
-    busy=true;readReason='manual';
-    const button=$('syncNow');if(button)button.disabled=true;
-    try{
-      await window.scrapRefresh?.();
-      // 수동 동기화 시 폰트 설정도 한 번만 조회합니다.
-      await window.scrapFontCloudRefresh?.();
-      lastSync=Date.now();
-      msg('클라우드 동기화 완료 · '+new Date(lastSync).toLocaleTimeString('ko-KR')+' · 자동 반복 조회 꺼짐');
-    }catch(e){msg('동기화 실패: '+errText(e));}
-    finally{busy=false;readReason='login';if(button?.isConnected)button.disabled=false;drawUsage();}
-  }
-  async function setSession(session){
-    user=session?.user||null;sync.active=!!user;
-    sync.lastSignature=null;
-    draw();readReason='login';drawUsage();
-    if(sync.active){setTimeout(()=>window.scrapFontCloudRefresh?.(),0);msg('로그인됨: '+user.email+' · 클라우드 데이터 불러오는 중');await window.scrapRefresh?.();}
-    else{setTimeout(()=>window.scrapFontCloudRefresh?.(),0);msg(valid?'로그아웃 상태 · 이 기기의 IndexedDB 사용':'연결 설정 필요: sync-config.js의 Publishable key를 입력하세요.');await window.scrapRefresh?.();}
-  }
-  function draw(){
-    const root=$('syncControls');if(!root)return;
-    if(!valid){root.innerHTML='<p class="warning">sync-config.js 파일에 Supabase Publishable key를 입력한 뒤 GitHub에 업로드하세요. 비밀키는 절대 사용하지 마세요.</p>';return;}
-    if(user){
-      root.innerHTML=`<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">iPad 로컬 자료를 클라우드로 복사</button><button class="btn" id="syncLogout">로그아웃</button></div><p class="hint">로그인 중에는 클라우드에 저장됩니다. 기존 로컬 자료는 자동으로 삭제되지 않습니다. 로컬 자료 이전은 최초 1회만 실행하세요.</p>`;
-      $('syncNow').onclick=update;
-      $('syncLogout').onclick=async()=>{try{errorCheck(await client.auth.signOut())}catch(e){alert(errText(e))}};
-      $('migrateLocal').onclick=migrate;
-    }else{
-      root.innerHTML=`<form id="syncLogin"><div class="field"><label>이메일</label><input name="email" type="email" autocomplete="email" required></div><div class="field"><label>비밀번호 (6자 이상)</label><input name="password" type="password" minlength="6" autocomplete="current-password" required></div><div class="actions"><button class="btn primary" type="submit">로그인</button><button class="btn" type="button" id="syncSignup">계정 생성</button></div></form><p class="hint">Supabase 인증 계정으로 두 기기에서 동일하게 로그인하세요. 계정 생성 시 이메일 확인이 필요할 수 있습니다.</p>`;
-      $('syncLogin').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);try{const result=await client.auth.signInWithPassword({email:String(fd.get('email')),password:String(fd.get('password'))});errorCheck(result);await setSession(result.data.session)}catch(err){alert('로그인 실패: '+errText(err))}};
-      $('syncSignup').onclick=async()=>{const fd=new FormData($('syncLogin'));const email=String(fd.get('email')),password=String(fd.get('password'));if(!email||password.length<6){alert('이메일과 6자 이상의 비밀번호를 입력하세요.');return}try{const result=await client.auth.signUp({email,password});errorCheck(result);alert(result.data.session?'계정이 생성되었습니다.':'계정 생성 요청이 완료되었습니다. 이메일 인증 메시지를 확인한 후 로그인하세요.');if(result.data.session)await setSession(result.data.session)}catch(err){alert('계정 생성 실패: '+errText(err))}};
-    }
-  }
-  async function migrate(){
-    if(!sync.active)return;
-    const localFolders=await localAll('folders'),localPosts=await localAll('posts');
-    if(!localFolders.length&&!localPosts.length){alert('이 기기에 이전할 로컬 자료가 없습니다.');return;}
-    if(!confirm(`로컬 폴더 ${localFolders.length}개, 스크랩 ${localPosts.length}개를 현재 로그인 계정으로 복사합니다. 클라우드에 같은 ID가 있으면 기존 클라우드 항목을 유지합니다. 계속하시겠습니까?`))return;
-    const button=$('migrateLocal');button.disabled=true;
-    try{
-      let count=0;
-      for(const [store,records] of [['folders',localFolders],['posts',localPosts]]){
-        for(const r of records){
-          const {error}=await client.from(table[store]).insert({id:r.id,user_id:user.id,data:r});
-          if(error && error.code!=='23505')throw error;
-          if(!error)count++;
-        }
-      }
-      alert(`이전 완료: 신규 ${count}개 항목을 복사했습니다. 로컬 원본은 그대로 남아 있습니다.`);
-      await window.scrapRefresh?.();
-    }catch(e){alert('일부 자료 이전 실패: '+errText(e)+'\n다시 실행해도 같은 ID의 기존 자료는 덮어쓰지 않습니다. 이미지가 크면 용량을 줄여주세요.');}
-    finally{if(button.isConnected)button.disabled=false;}
-  }
-  async function init(){
-    // 기존 스크립트의 refresh 함수를 외부 모듈에서 안전하게 호출할 수 있게 연결
-    if(typeof window.scrapRefresh!=='function'){
-      setTimeout(init,100);return;
-    }
-    if(!valid||!window.supabase?.createClient){draw();msg(valid?'Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.':'Publishable key를 설정해야 합니다.');return;}
-    client=window.supabase.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    const {data,error}=await client.auth.getSession();if(error)msg('세션 확인 오류: '+errText(error));
-    await setSession(data?.session);
-    client.auth.onAuthStateChange((event,session)=>{
-      if(event==='SIGNED_IN' && user?.id!==session?.user?.id) setTimeout(()=>setSession(session),0);
-      if(event==='SIGNED_OUT')setTimeout(()=>setSession(null),0);
-    });
-    // 자동 15초 조회 및 탭 재진입 시 전체 조회를 중단합니다.
-  }
-  window.addEventListener('load',init);
+/* Curated by Hide: Google Drive appDataFolder sync. Local IndexedDB remains untouched. */
+(()=>{
+'use strict';
+const cfg=window.SCRAP_GOOGLE_CONFIG||{};
+const FILE='curated-by-hide-v1.json';
+const API='https://www.googleapis.com/drive/v3/files';
+const $=id=>document.getElementById(id);
+const msg=s=>{if($('syncStatus'))$('syncStatus').textContent=s};
+const errorText=e=>e?.message||String(e);
+const sync={active:false};window.scrapSync=sync;
+let token='',tokenClient=null,remoteId=null,revision=null,loaded=false,busy=false;
+let snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
+let work=Promise.resolve();
+const clone=v=>JSON.parse(JSON.stringify(v));
+const bytes=v=>new TextEncoder().encode(JSON.stringify(v)).byteLength;
+const fmt=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':(n/1048576).toFixed(2)+' MB';
+const stamp=()=>new Date().toISOString();
+function info(){
+ if($('syncModeInfo'))$('syncModeInfo').textContent='Google Drive 앱 전용 저장소 · 수동 새로고침 · 저장 시 업로드';
+ if($('syncUsageInfo'))$('syncUsageInfo').textContent='현재 데이터 크기(추정): '+fmt(bytes(snapshot));
+}
+sync.usageRefresh=info;
+function enqueue(fn){const task=work.then(fn);work=task.catch(()=>{});return task}
+async function request(url,options={}){
+ if(!token)throw Error('Google 계정으로 로그인해 주세요.');
+ const headers=new Headers(options.headers||{});headers.set('Authorization','Bearer '+token);
+ const response=await fetch(url,{...options,headers});
+ if(!response.ok){let body='';try{body=await response.text()}catch{}
+ if(response.status===401){msg('Google 인증이 만료되었습니다. 다시 로그인해 주세요.');throw Error('Google 인증 만료: 다시 로그인해 주세요.')}
+ if(response.status===403)throw Error('Google Drive 접근 거부: API 활성화와 drive.appdata 권한을 확인하세요. '+body.slice(0,200));
+ throw Error('Drive HTTP '+response.status+': '+body.slice(0,300));}
+ if(response.status===204)return null;
+ const t=await response.text();return t?JSON.parse(t):null;
+}
+async function locate(){
+ const q=encodeURIComponent("name='"+FILE+"' and trashed=false");
+ const url=API+'?spaces=appDataFolder&q='+q+'&fields=nextPageToken,files(id,name,version,modifiedTime)&page_size=100';
+ const result=await request(url);
+ const found=(result.files||[]).sort((a,b)=>String(b.modifiedTime||'').localeCompare(String(a.modifiedTime||'')))[0];
+ remoteId=found?.id||null;revision=found?.version||null;
+}
+function validate(data){
+ if(!data||data.version!==1||!Array.isArray(data.folders)||!Array.isArray(data.posts))throw Error('Drive 저장 파일 형식이 올바르지 않습니다. 기존 데이터를 덮어쓰지 않았습니다.');
+ if(data.folders.some(x=>!x||typeof x.id!=='string')||data.posts.some(x=>!x||typeof x.id!=='string'))throw Error('저장 데이터의 ID가 잘못되었습니다.');
+ return {version:1,folders:data.folders,posts:data.posts,fontSettings:data.fontSettings??null,modifiedAt:data.modifiedAt??null};
+}
+async function download(){
+ await locate();
+ if(!remoteId){snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};loaded=true;info();return}
+ const result=await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media');
+ snapshot=validate(result);loaded=true;info();
+}
+async function checkRevision(){
+ if(!remoteId){await locate();if(remoteId)throw Error('다른 기기에서 저장 파일이 생성되었습니다. 먼저 지금 동기화를 눌러 주세요.');return}
+ const meta=await request(API+'/'+encodeURIComponent(remoteId)+'?fields=id,version');
+ if(String(meta.version)!==String(revision))throw Error('다른 기기에서 데이터가 변경되었습니다. 현재 편집 내용이 덮어써지지 않도록 저장을 중단했습니다. 먼저 백업 후 지금 동기화를 눌러 주세요.');
+}
+async function upload(next){
+ if(!loaded)throw Error('클라우드 데이터를 아직 불러오지 못했습니다.');
+ await checkRevision();
+ const data=validate({...next,modifiedAt:stamp()});
+ if(bytes(data)>4*1024*1024)throw Error('Drive 데이터가 4MB를 초과했습니다. 대용량 이미지용 분할 업로드 기능이 필요합니다. 기존 Drive 데이터는 변경하지 않았습니다.');
+ const boundary='scraphub_'+Math.random().toString(36).slice(2);
+ const meta=remoteId?{}:{name:FILE,parents:['appDataFolder'],mimeType:'application/json'};
+ const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(data)+'\r\n--'+boundary+'--';
+ const url='https://www.googleapis.com/upload/drive/v3/files'+(remoteId?'/'+encodeURIComponent(remoteId):'')+'?uploadType=multipart&fields=id,version';
+ const result=await request(url,{method:remoteId?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});
+ remoteId=result.id;revision=result.version;snapshot=data;info();
+}
+sync.getAll=async store=>{if(!loaded)throw Error('Drive 데이터 로딩 중입니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');return clone(snapshot[store])};
+sync.put=(store,record)=>enqueue(async()=>{
+ if(!sync.active)throw Error('로그인이 필요합니다.');if(!['folders','posts'].includes(store)||!record?.id)throw Error('저장 항목이 잘못되었습니다.');
+ const next=clone(snapshot),index=next[store].findIndex(x=>x.id===record.id);
+ if(index<0)next[store].push(clone(record));else next[store][index]=clone(record);
+ await upload(next);return record.id;
+});
+sync.del=(store,id)=>enqueue(async()=>{
+ if(!sync.active)throw Error('로그인이 필요합니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');
+ const next=clone(snapshot);next[store]=next[store].filter(x=>x.id!==id);await upload(next);
+});
+sync.fontUser=async()=>sync.active?'google-drive-account':null;
+sync.fontGet=async()=>{if(!sync.active)throw Error('로그인이 필요합니다.');return clone(snapshot.fontSettings)};
+sync.fontPut=value=>enqueue(async()=>{if(!sync.active)throw Error('로그인이 필요합니다.');await upload({...clone(snapshot),fontSettings:clone(value)})});
+async function reload(){
+ if(busy)return;busy=true;
+ try{await work;await download();await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();msg('Google Drive 동기화 완료 · '+new Date().toLocaleTimeString('ko-KR'))}
+ catch(e){msg('동기화 실패: '+errorText(e));alert('Google Drive 동기화 실패: '+errorText(e))}
+ finally{busy=false}
+}
+function localAll(store){return new Promise((resolve,reject)=>{
+ const r=indexedDB.open('personal-scrap-hub-v1',1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{
+ const d=r.result,tx=d.transaction(store,'readonly'),q=tx.objectStore(store).getAll();q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);tx.oncomplete=()=>d.close();};
+})}
+async function migrateLocal(){
+ if(!sync.active)return;
+ const localFolders=await localAll('folders'),localPosts=await localAll('posts');
+ if(!localFolders.length&&!localPosts.length){alert('이 기기의 IndexedDB에 이전할 자료가 없습니다. 기존 Supabase 자료는 별도로 Backup_Export가 필요합니다.');return}
+ if(!confirm(`로컬 폴더 ${localFolders.length}개, 스크랩 ${localPosts.length}개를 Drive에 추가합니다. 같은 ID는 기존 Drive 자료를 유지합니다. 진행하시겠습니까?`))return;
+ try{await enqueue(async()=>{
+ const next=clone(snapshot);
+ for(const store of ['folders','posts'])for(const record of store==='folders'?localFolders:localPosts){if(!next[store].some(x=>x.id===record.id))next[store].push(record)}
+ await upload(next);
+ });await window.scrapRefresh?.();alert('로컬 자료 이전 완료. 원본 IndexedDB는 유지됩니다.')}
+ catch(e){alert('이전 실패: '+errorText(e))}
+}
+function draw(){const root=$('syncControls');if(!root)return;
+ if(!cfg.clientId){root.innerHTML='<p class="warning">Google OAuth 클라이언트 ID 설정이 없습니다.</p>';return}
+ if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
+ $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('syncLogout').onclick=()=>{token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
+ }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요. 최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
+ $('googleLogin').onclick=()=>{
+ if(!tokenClient){alert('Google 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return}
+ tokenClient.requestAccessToken({prompt:'consent'});
+ };
+ }
+}
+async function onToken(response){
+ if(response.error){msg('Google 로그인 오류: '+response.error);return}
+ token=response.access_token;sync.active=true;loaded=false;draw();msg('Google Drive 데이터를 불러오는 중…');
+ try{await download();await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();msg('Google Drive 연결됨 · 폴더 '+snapshot.folders.length+'개 · 스크랩 '+snapshot.posts.length+'개')}
+ catch(e){sync.active=false;token='';loaded=false;draw();msg('연결 실패: '+errorText(e));alert('Google Drive 연결 실패: '+errorText(e))}
+}
+function initGIS(){
+ if(!window.google?.accounts?.oauth2){msg('Google 로그인 라이브러리를 불러오지 못했습니다.');return}
+ tokenClient=google.accounts.oauth2.initTokenClient({client_id:cfg.clientId,scope:cfg.scope||'https://www.googleapis.com/auth/drive.appdata',callback:onToken});
+ draw();msg('Google Drive 연결 준비 완료 · 로그인해 주세요.');
+}
+function init(){
+ if(typeof window.scrapRefresh!=='function'){setTimeout(init,100);return}
+ draw();info();
+ const foot=document.querySelector('.footer');if(foot)foot.textContent='로그아웃 상태에서는 이 기기의 IndexedDB를 사용합니다. Google 로그인 상태에서는 Google Drive 앱 전용 저장소에 저장합니다. 중요한 자료는 정기적으로 백업하세요.';
+ const panel=$('syncPanel');if(panel){const paragraphs=panel.querySelectorAll('p.hint');for(const p of paragraphs){if(p.textContent.includes('Supabase 공식 Egress'))p.textContent='표시 용량은 저장 데이터 JSON 크기의 추정값입니다. Google Drive 실제 네트워크 전송량과는 다를 수 있습니다.';}}
+ if(!cfg.clientId)return;
+ const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=initGIS;s.onerror=()=>msg('Google 로그인 라이브러리 로드 실패');document.head.appendChild(s);
+}
+window.addEventListener('load',init);
 })();
