@@ -9,6 +9,11 @@ const msg=s=>{if($('syncStatus'))$('syncStatus').textContent=s};
 const errorText=e=>e?.message||String(e);
 const sync={active:false};window.scrapSync=sync;
 let token='',tokenClient=null,remoteId=null,revision=null,loaded=false,busy=false;
+// Only a logout preference is stored; Google access tokens are never persisted.
+const LOGOUT_KEY='curated-drive-manual-logout-v1';
+let silentAttempt=false;
+const loggedOutHere=()=>{try{return sessionStorage.getItem(LOGOUT_KEY)==='1'}catch{return false}};
+const setLoggedOutHere=value=>{try{if(value)sessionStorage.setItem(LOGOUT_KEY,'1');else sessionStorage.removeItem(LOGOUT_KEY)}catch{}};
 let snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
 let work=Promise.resolve();
 const clone=v=>JSON.parse(JSON.stringify(v));
@@ -130,24 +135,43 @@ async function importMigration(event){
 function draw(){const root=$('syncControls');if(!root)return;
  if(!cfg.clientId){root.innerHTML='<p class="warning">Google OAuth 클라이언트 ID 설정이 없습니다.</p>';return}
  if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="importMigration">통합 JSON 복원</button><input type="file" id="migrationFile" accept=".json,application/json" style="display:none"><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
- $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
+ $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
  }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요. 최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
  $('googleLogin').onclick=()=>{
  if(!tokenClient){alert('Google 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return}
+ silentAttempt=false;
  tokenClient.requestAccessToken({prompt:'consent'});
  };
  }
 }
 async function onToken(response){
- if(response.error){msg('Google 로그인 오류: '+response.error);return}
+ if(response.error){
+  if(silentAttempt){silentAttempt=false;draw();msg('자동 연결을 완료하지 못했습니다. Google 로그인 버튼을 눌러 주세요.');return}
+  msg('Google 로그인 오류: '+response.error);return
+ }
+ if(!response.access_token){msg('Google 인증 토큰을 받지 못했습니다. 다시 로그인해 주세요.');return}
+ silentAttempt=false;setLoggedOutHere(false);
  token=response.access_token;sync.active=true;loaded=false;draw();msg('Google Drive 데이터를 불러오는 중…');
  try{await download();await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();msg('Google Drive 연결됨 · 폴더 '+snapshot.folders.length+'개 · 스크랩 '+snapshot.posts.length+'개')}
  catch(e){sync.active=false;token='';loaded=false;draw();msg('연결 실패: '+errorText(e));alert('Google Drive 연결 실패: '+errorText(e))}
 }
 function initGIS(){
  if(!window.google?.accounts?.oauth2){msg('Google 로그인 라이브러리를 불러오지 못했습니다.');return}
- tokenClient=google.accounts.oauth2.initTokenClient({client_id:cfg.clientId,scope:cfg.scope||'https://www.googleapis.com/auth/drive.appdata',callback:onToken});
- draw();msg('Google Drive 연결 준비 완료 · 로그인해 주세요.');
+ tokenClient=google.accounts.oauth2.initTokenClient({
+  client_id:cfg.clientId,
+  scope:cfg.scope||'https://www.googleapis.com/auth/drive.appdata',
+  callback:onToken,
+  error_callback:()=>{
+   if(silentAttempt){silentAttempt=false;draw();msg('자동 연결이 제한되었습니다. Google 로그인 버튼을 눌러 주세요.')}
+   else msg('Google 로그인 창을 열지 못했습니다. 다시 시도해 주세요.');
+  }
+ });
+ draw();
+ if(loggedOutHere()){msg('이 탭에서 로그아웃했습니다. 다시 연결하려면 Google 로그인 버튼을 눌러 주세요.');return}
+ // Browser may block a token request without user interaction. In that case, manual login remains available.
+ silentAttempt=true;msg('Google Drive 자동 연결을 시도하는 중…');
+ try{tokenClient.requestAccessToken({prompt:''})}
+ catch(e){silentAttempt=false;draw();msg('자동 연결을 완료하지 못했습니다. Google 로그인 버튼을 눌러 주세요.')} 
 }
 function init(){
  if(typeof window.scrapRefresh!=='function'){setTimeout(init,100);return}
