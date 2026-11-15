@@ -26,6 +26,31 @@ function clearSessionToken(){try{sessionStorage.removeItem(TOKEN_KEY)}catch{}}
 const loggedOutHere=()=>{try{return sessionStorage.getItem(LOGOUT_KEY)==='1'}catch{return false}};
 const setLoggedOutHere=value=>{try{if(value)sessionStorage.setItem(LOGOUT_KEY,'1');else sessionStorage.removeItem(LOGOUT_KEY)}catch{}};
 let snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
+
+// Cloud snapshot cache uses a separate IndexedDB database: original local data stays untouched.
+const CACHE_DB='curated-drive-offline-cache-v1';
+function cacheDB(){return new Promise((resolve,reject)=>{
+ const r=indexedDB.open(CACHE_DB,1);
+ r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('snapshots'))r.result.createObjectStore('snapshots')};
+ r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+})}
+async function cacheRead(){const d=await cacheDB();try{return await new Promise((resolve,reject)=>{
+ const tx=d.transaction('snapshots','readonly');const r=tx.objectStore('snapshots').get('latest');
+ r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);
+})}finally{d.close()}}
+async function cacheWrite(data){const d=await cacheDB();try{await new Promise((resolve,reject)=>{
+ const tx=d.transaction('snapshots','readwrite');tx.objectStore('snapshots').put(clone(data),'latest');
+ tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+})}finally{d.close()}}
+sync.offlineGetAll=async store=>{
+ if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');
+ const cached=await cacheRead();return cached?clone(validate(cached)[store]):null;
+};
+sync.hasOfflineCache=async()=>Boolean(await cacheRead());
+async function rememberSnapshot(){
+ try{await cacheWrite(snapshot)}catch(e){msg('Drive 동기화 완료 · 오프라인 사본 저장 실패: '+errorText(e))}
+}
+
 let work=Promise.resolve();
 const clone=v=>JSON.parse(JSON.stringify(v));
 const bytes=v=>new TextEncoder().encode(JSON.stringify(v)).byteLength;
@@ -62,9 +87,9 @@ function validate(data){
 }
 async function download(){
  await locate();
- if(!remoteId){snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};loaded=true;info();return}
+ if(!remoteId){snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};loaded=true;info();await rememberSnapshot();return}
  const result=await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media');
- snapshot=validate(result);loaded=true;info();
+ snapshot=validate(result);loaded=true;info();await rememberSnapshot();
 }
 async function checkRevision(){
  if(!remoteId){await locate();if(remoteId)throw Error('다른 기기에서 저장 파일이 생성되었습니다. 먼저 지금 동기화를 눌러 주세요.');return}
@@ -81,7 +106,11 @@ async function upload(next){
  const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(data)+'\r\n--'+boundary+'--';
  const url='https://www.googleapis.com/upload/drive/v3/files'+(remoteId?'/'+encodeURIComponent(remoteId):'')+'?uploadType=multipart&fields=id,version';
  const result=await request(url,{method:remoteId?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});
- remoteId=result.id;revision=result.version;snapshot=data;info();
+ remoteId=result.id;
+ // Fetch the authoritative Drive revision after each successful upload.
+ const current=await request(API+'/'+encodeURIComponent(remoteId)+'?fields=id,version');
+ if(!current?.version)throw Error('Drive 저장은 완료되었지만 최신 버전을 확인하지 못했습니다. 지금 동기화 후 다시 시도해 주세요.');
+ revision=current.version;snapshot=data;info();await rememberSnapshot();
 }
 sync.getAll=async store=>{if(!loaded)throw Error('Drive 데이터 로딩 중입니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');return clone(snapshot[store])};
 sync.put=(store,record)=>enqueue(async()=>{
@@ -146,7 +175,7 @@ async function importMigration(event){
 function draw(){const root=$('syncControls');if(!root)return;
  if(!cfg.clientId){root.innerHTML='<p class="warning">Google OAuth 클라이언트 ID 설정이 없습니다.</p>';return}
  if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="importMigration">통합 JSON 복원</button><input type="file" id="migrationFile" accept=".json,application/json" style="display:none"><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
- $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);clearSessionToken();token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · IndexedDB 사용');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
+ $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);clearSessionToken();token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · 마지막 Drive 사본 표시(있는 경우, 읽기 전용)');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
  }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요. 최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
  $('googleLogin').onclick=()=>{
  if(!tokenClient){alert('Google 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return}
@@ -193,7 +222,7 @@ function initGIS(){
 function init(){
  if(typeof window.scrapRefresh!=='function'){setTimeout(init,100);return}
  draw();info();
- const foot=document.querySelector('.footer');if(foot)foot.textContent='로그아웃 상태에서는 이 기기의 IndexedDB를 사용합니다. Google 로그인 상태에서는 Google Drive 앱 전용 저장소에 저장합니다. 중요한 자료는 정기적으로 백업하세요.';
+ const foot=document.querySelector('.footer');if(foot)foot.textContent='로그아웃 상태에서는 마지막 Drive 사본을 읽기 전용으로 표시합니다(사본이 없다면 기존 IndexedDB 사용). Google 로그인 상태에서는 Drive에 저장합니다. 중요한 자료는 정기적으로 백업하세요.';
  const panel=$('syncPanel');if(panel){const paragraphs=panel.querySelectorAll('p.hint');for(const p of paragraphs){if(p.textContent.includes('Supabase 공식 Egress'))p.textContent='표시 용량은 저장 데이터 JSON 크기의 추정값입니다. Google Drive 실제 네트워크 전송량과는 다를 수 있습니다.';}}
  if(!cfg.clientId)return;
  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=initGIS;s.onerror=()=>msg('Google 로그인 라이브러리 로드 실패');document.head.appendChild(s);
