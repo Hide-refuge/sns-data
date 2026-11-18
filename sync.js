@@ -26,6 +26,19 @@ function clearSessionToken(){try{sessionStorage.removeItem(TOKEN_KEY)}catch{}}
 const loggedOutHere=()=>{try{return sessionStorage.getItem(LOGOUT_KEY)==='1'}catch{return false}};
 const setLoggedOutHere=value=>{try{if(value)sessionStorage.setItem(LOGOUT_KEY,'1');else sessionStorage.removeItem(LOGOUT_KEY)}catch{}};
 let snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
+// CBH_LOCAL_FIRST_V1: 원격 기준 버전과 미전송 변경은 같은 IndexedDB 트랜잭션에 보존합니다.
+let dirty=false, baseRevision=null, localReady=false;
+function syncState(){
+ const el=$('cbhLocalSyncState');if(!el)return;
+ el.textContent=dirty?'이 기기에 Google Drive 미동기화 변경 사항이 있습니다. 지금 동기화를 눌러 업로드하세요.':'Google Drive 미동기화 변경 사항 없음';
+}
+function ensureSyncState(){
+ let el=$('cbhLocalSyncState');if(el)return syncState();
+ const parent=$('syncPanel');if(!parent)return;
+ el=document.createElement('p');el.id='cbhLocalSyncState';el.className='hint';el.setAttribute('aria-live','polite');
+ parent.insertBefore(el,$('syncControls')||null);syncState();
+}
+
 
 // Cloud snapshot cache uses a separate IndexedDB database: original local data stays untouched.
 const CACHE_DB='curated-drive-offline-cache-v1';
@@ -44,12 +57,29 @@ async function cacheWrite(data){const d=await cacheDB();try{await new Promise((r
 })}finally{d.close()}}
 sync.offlineGetAll=async store=>{
  if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');
- const cached=await cacheRead();return cached?clone(validate(cached)[store]):null;
+ const cached=await cacheRead();return cached?clone(validate(cached.snapshot||cached)[store]):null;
 };
 sync.hasOfflineCache=async()=>Boolean(await cacheRead());
 async function rememberSnapshot(){
- try{await cacheWrite(snapshot)}catch(e){msg('Drive 동기화 완료 · 오프라인 사본 저장 실패: '+errorText(e))}
+ try{await cacheWrite({snapshot:clone(snapshot),dirty,baseRevision})}
+ catch(e){msg('로컬 저장 실패: '+errorText(e));throw e}
 }
+async function loadLocalState(){
+ const saved=await cacheRead();
+ if(saved&&saved.snapshot){snapshot=validate(saved.snapshot);dirty=Boolean(saved.dirty);baseRevision=saved.baseRevision??null;localReady=true;return true}
+ if(saved){snapshot=validate(saved);dirty=false;baseRevision=null;localReady=true;return true}
+ return false;
+}
+async function localEdit(fn){
+ if(!localReady)await loadLocalState();
+ if(!localReady)throw Error('로컬 데이터가 아직 준비되지 않았습니다. Google 로그인 후 데이터를 불러와 주세요.');
+ const before=clone(snapshot),oldDirty=dirty,oldBase=baseRevision;
+ if(!dirty)baseRevision=revision;
+ fn(snapshot);dirty=true;
+ try{await rememberSnapshot();syncState();info()}
+ catch(e){snapshot=before;dirty=oldDirty;baseRevision=oldBase;syncState();throw e}
+}
+
 
 // CBH_DRIVE_TIMING_V1: 저장 단계별 진단 전용. 토큰과 데이터 내용은 기록하지 않습니다.
 const timing=window.scrapDriveTiming={last:null,history:[]};
@@ -123,10 +153,18 @@ function validate(data){
  return {version:1,folders:data.folders,posts:data.posts,fontSettings:data.fontSettings??null,modifiedAt:data.modifiedAt??null};
 }
 async function download(){
+ // 미동기화 변경 사항은 서버 다운로드보다 우선하여 보호합니다.
+ if(!localReady)await loadLocalState();
+ if(dirty){
+  await locate();loaded=true;info();syncState();
+  msg('미동기화 로컬 변경 사항이 있어 Drive 데이터로 덮어쓰지 않았습니다.');return;
+ }
  await locate();
- if(!remoteId){snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};loaded=true;info();await rememberSnapshot();return}
- const result=await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media');
- snapshot=validate(result);loaded=true;info();await rememberSnapshot();
+ const next=remoteId?validate(await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media')):{version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
+ const previous=clone(snapshot),oldBase=baseRevision;
+ snapshot=next;baseRevision=revision;localReady=true;loaded=true;
+ try{await rememberSnapshot()}catch(e){snapshot=previous;baseRevision=oldBase;throw e}
+ info();syncState();
 }
 async function checkRevision(){
  if(!remoteId){await locate();if(remoteId)throw Error('다른 기기에서 저장 파일이 생성되었습니다. 먼저 지금 동기화를 눌러 주세요.');return}
@@ -156,24 +194,39 @@ async function upload(next,operation='저장'){
  entry.status='성공';
  }catch(e){entry.status='실패';throw e}finally{entry.totalMs=elapsed(t0);timingDone(entry)}
 }
-sync.getAll=async store=>{if(!loaded)throw Error('Drive 데이터 로딩 중입니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');return clone(snapshot[store])};
+sync.getAll=async store=>{if(!loaded&&!localReady)throw Error('Drive 데이터 로딩 중입니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');return clone(snapshot[store])};
 sync.put=(store,record)=>enqueue(async()=>{
- if(!sync.active)throw Error('로그인이 필요합니다.');if(!['folders','posts'].includes(store)||!record?.id)throw Error('저장 항목이 잘못되었습니다.');
- const next=clone(snapshot),index=next[store].findIndex(x=>x.id===record.id);
- if(index<0)next[store].push(clone(record));else next[store][index]=clone(record);
- await upload(next,'추가/수정: '+store);return record.id;
+ if(!['folders','posts'].includes(store)||!record?.id)throw Error('저장 항목이 잘못되었습니다.');
+ await localEdit(data=>{const list=data[store],i=list.findIndex(x=>x.id===record.id);if(i<0)list.push(clone(record));else list[i]=clone(record)});
+ return record.id;
 });
 sync.del=(store,id)=>enqueue(async()=>{
- if(!sync.active)throw Error('로그인이 필요합니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');
- const next=clone(snapshot);next[store]=next[store].filter(x=>x.id!==id);await upload(next,'삭제: '+store);
+ if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');
+ await localEdit(data=>{data[store]=data[store].filter(x=>x.id!==id)});
 });
 sync.fontUser=async()=>sync.active?'google-drive-account':null;
-sync.fontGet=async()=>{if(!sync.active)throw Error('로그인이 필요합니다.');return clone(snapshot.fontSettings)};
-sync.fontPut=value=>enqueue(async()=>{if(!sync.active)throw Error('로그인이 필요합니다.');await upload({...clone(snapshot),fontSettings:clone(value)})});
+sync.fontGet=async()=>{if(!localReady)await loadLocalState();if(!localReady)throw Error('데이터 로딩 중입니다.');return clone(snapshot.fontSettings)};
+sync.fontPut=value=>enqueue(async()=>{await localEdit(data=>{data.fontSettings=clone(value)})});
+async function uploadPending(){
+ if(!sync.active)throw Error('Google 로그인 후 동기화해 주세요.');
+ if(!localReady)await loadLocalState();
+ if(!dirty)return false;
+ // 변경 시작 시점의 버전을 반드시 비교합니다. 기존 upload()도 현재 revision을 재검사합니다.
+ await locate();
+ if(String(revision??'')!==String(baseRevision??''))throw Error('다른 기기에서 Drive 데이터가 변경되었습니다. 로컬 자료는 보존했습니다. 자동 덮어쓰기를 중단합니다.');
+ await upload(clone(snapshot),'수동 동기화');
+ dirty=false;baseRevision=revision;
+ // 업로드 성공 뒤 로컬 완료 표시 저장이 실패해도 다음 시도에서 덮어쓰지 않도록 알립니다.
+ await rememberSnapshot();syncState();return true;
+}
 async function reload(){
  if(busy)return;busy=true;
- try{await work;await download();await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();msg('Google Drive 동기화 완료 · '+new Date().toLocaleTimeString('ko-KR'))}
- catch(e){msg('동기화 실패: '+errorText(e));alert('Google Drive 동기화 실패: '+errorText(e))}
+ try{
+  await work;
+  if(dirty){await enqueue(uploadPending);msg('Google Drive 업로드 완료 · '+new Date().toLocaleTimeString('ko-KR'))}
+  else{await download();msg('Google Drive 최신 데이터 확인 완료 · '+new Date().toLocaleTimeString('ko-KR'))}
+  await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();syncState();
+ }catch(e){msg('동기화 중단: '+errorText(e));alert('동기화 중단: '+errorText(e)+'\n로컬 변경 사항은 유지됩니다.')}
  finally{busy=false}
 }
 function localAll(store){return new Promise((resolve,reject)=>{
@@ -182,6 +235,7 @@ function localAll(store){return new Promise((resolve,reject)=>{
 })}
 async function migrateLocal(){
  if(!sync.active)return;
+ if(dirty){alert('미동기화 변경 사항이 있습니다. 먼저 지금 동기화를 진행해 주세요.');return}
  const localFolders=await localAll('folders'),localPosts=await localAll('posts');
  if(!localFolders.length&&!localPosts.length){alert('이 기기의 IndexedDB에 이전할 자료가 없습니다. 기존 Supabase 자료는 별도로 Backup_Export가 필요합니다.');return}
  if(!confirm(`로컬 폴더 ${localFolders.length}개, 스크랩 ${localPosts.length}개를 Drive에 추가합니다. 같은 ID는 기존 Drive 자료를 유지합니다. 진행하시겠습니까?`))return;
@@ -205,6 +259,7 @@ function parseMigrationFile(raw){
 }
 async function importMigration(event){
  const input=event.target,file=input.files?.[0];input.value='';if(!file||!sync.active)return;
+ if(dirty){alert('미동기화 변경 사항이 있습니다. 먼저 지금 동기화를 진행해 주세요.');return}
  if(file.size>25*1024*1024){alert('선택한 JSON 파일이 25MB를 초과합니다.');return}
  try{
   const parsed=parseMigrationFile(JSON.parse(await file.text()));
@@ -219,7 +274,7 @@ async function importMigration(event){
 function draw(){const root=$('syncControls');if(!root)return;
  if(!cfg.clientId){root.innerHTML='<p class="warning">Google OAuth 클라이언트 ID 설정이 없습니다.</p>';return}
  if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="importMigration">통합 JSON 복원</button><input type="file" id="migrationFile" accept=".json,application/json" style="display:none"><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
- $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);clearSessionToken();token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();msg('로그아웃 상태 · 마지막 Drive 사본 표시(있는 경우, 읽기 전용)');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
+ $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);clearSessionToken();token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();syncState();msg('로그아웃 상태 · 마지막 Drive 사본 표시(있는 경우, 읽기 전용)');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
  }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요. 최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
  $('googleLogin').onclick=()=>{
  if(!tokenClient){alert('Google 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return}
@@ -265,7 +320,7 @@ function initGIS(){
 }
 function init(){
  if(typeof window.scrapRefresh!=='function'){setTimeout(init,100);return}
- draw();info();
+ draw();info();ensureSyncState();loadLocalState().then(()=>{syncState();window.scrapRefresh?.()}).catch(e=>msg('로컬 자료 읽기 실패: '+errorText(e)));
  const foot=document.querySelector('.footer');if(foot)foot.textContent='로그아웃 상태에서는 마지막 Drive 사본을 읽기 전용으로 표시합니다(사본이 없다면 기존 IndexedDB 사용). Google 로그인 상태에서는 Drive에 저장합니다. 중요한 자료는 정기적으로 백업하세요.';
  const panel=$('syncPanel');if(panel){const paragraphs=panel.querySelectorAll('p.hint');for(const p of paragraphs){if(p.textContent.includes('Supabase 공식 Egress'))p.textContent='표시 용량은 저장 데이터 JSON 크기의 추정값입니다. Google Drive 실제 네트워크 전송량과는 다를 수 있습니다.';}}
  if(!cfg.clientId)return;
