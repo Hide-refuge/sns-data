@@ -59,6 +59,34 @@ function timingDone(entry){
  timing.last=entry;timing.history.push(entry);if(timing.history.length>30)timing.history.shift();
  console.table(entry.steps.map(x=>({step:x.step,ms:x.ms})));
  console.info('[Drive 저장 진단] 총 '+entry.totalMs+'ms / '+entry.status+' / '+entry.operation);
+ // CBH_DRIVE_TIMING_IPAD_V1: 개발자 도구 없이 측정 결과 표시
+ showTimingOnPage(entry);
+
+}
+function showTimingOnPage(entry){
+ try{
+  let panel=document.getElementById('cbhDriveTimingPanel');
+  if(!panel){
+   panel=document.createElement('section');panel.id='cbhDriveTimingPanel';
+   panel.style.cssText='margin:12px 0;padding:14px;border:1px solid #cbd5e1;border-radius:10px;background:var(--panel,#fff);color:inherit;overflow-wrap:anywhere';
+   const parent=document.getElementById('syncPanel')||document.getElementById('syncControls')?.parentElement||document.querySelector('main');
+   if(!parent)return;
+   parent.appendChild(panel);
+  }
+  panel.replaceChildren();
+  const title=document.createElement('strong');title.textContent='Google Drive 저장 속도 진단';panel.appendChild(title);
+  const summary=document.createElement('p');summary.textContent=entry.operation+' · '+entry.status+' · 총 '+entry.totalMs+'ms ('+(entry.totalMs/1000).toFixed(2)+'초)';panel.appendChild(summary);
+  const table=document.createElement('table');table.style.cssText='width:100%;font-size:13px;border-collapse:collapse';
+  for(const step of entry.steps){const tr=document.createElement('tr'),a=document.createElement('td'),b=document.createElement('td');a.textContent=step.step;b.textContent=step.ms+'ms';b.style.textAlign='right';a.style.padding='4px';b.style.padding='4px';tr.append(a,b);table.appendChild(tr)}
+  panel.appendChild(table);
+  const button=document.createElement('button');button.type='button';button.className='btn';button.textContent='측정 결과 복사';button.style.marginTop='10px';
+  button.onclick=async()=>{
+   const report=['Google Drive 저장 속도 진단',entry.operation+' / '+entry.status,'전체: '+entry.totalMs+'ms',...entry.steps.map(x=>x.step+': '+x.ms+'ms')].join('\n');
+   try{await navigator.clipboard.writeText(report);button.textContent='복사 완료'}
+   catch(e){const input=document.createElement('textarea');input.value=report;input.readOnly=true;input.style.cssText='display:block;width:100%;min-height:120px;margin-top:8px';panel.appendChild(input);input.focus();input.select();button.textContent='아래 텍스트를 길게 눌러 복사해 주세요'}
+  };
+  panel.appendChild(button);
+ }catch(e){console.warn('저장 속도 진단 패널 표시 실패',e)}
 }
 let work=Promise.resolve();
 const clone=v=>JSON.parse(JSON.stringify(v));
