@@ -51,6 +51,15 @@ async function rememberSnapshot(){
  try{await cacheWrite(snapshot)}catch(e){msg('Drive 동기화 완료 · 오프라인 사본 저장 실패: '+errorText(e))}
 }
 
+// CBH_DRIVE_TIMING_V1: 저장 단계별 진단 전용. 토큰과 데이터 내용은 기록하지 않습니다.
+const timing=window.scrapDriveTiming={last:null,history:[]};
+const clock=()=>performance.now();
+const elapsed=(start)=>Math.round((clock()-start)*10)/10;
+function timingDone(entry){
+ timing.last=entry;timing.history.push(entry);if(timing.history.length>30)timing.history.shift();
+ console.table(entry.steps.map(x=>({step:x.step,ms:x.ms})));
+ console.info('[Drive 저장 진단] 총 '+entry.totalMs+'ms / '+entry.status+' / '+entry.operation);
+}
 let work=Promise.resolve();
 const clone=v=>JSON.parse(JSON.stringify(v));
 const bytes=v=>new TextEncoder().encode(JSON.stringify(v)).byteLength;
@@ -96,32 +105,39 @@ async function checkRevision(){
  const meta=await request(API+'/'+encodeURIComponent(remoteId)+'?fields=id,version');
  if(String(meta.version)!==String(revision))throw Error('다른 기기에서 데이터가 변경되었습니다. 현재 편집 내용이 덮어써지지 않도록 저장을 중단했습니다. 먼저 백업 후 지금 동기화를 눌러 주세요.');
 }
-async function upload(next){
+async function upload(next,operation='저장'){
+ const t0=clock(),entry={operation,status:'진행 중',steps:[],totalMs:0};
+ const mark=(step,start)=>entry.steps.push({step,ms:elapsed(start)});
+ try{
  if(!loaded)throw Error('클라우드 데이터를 아직 불러오지 못했습니다.');
- await checkRevision();
+ const tRevision=clock();await checkRevision();mark('저장 전 버전 확인',tRevision);
  const data=validate({...next,modifiedAt:stamp()});
  if(bytes(data)>20*1024*1024)throw Error('Drive 데이터가 20MB를 초과했습니다. 이미지 분리 저장 방식이 필요합니다. 기존 Drive 데이터는 변경하지 않았습니다.');
+ const tEncode=clock();
  const boundary='scraphub_'+Math.random().toString(36).slice(2);
  const meta=remoteId?{}:{name:FILE,parents:['appDataFolder'],mimeType:'application/json'};
  const body='--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(data)+'\r\n--'+boundary+'--';
  const url='https://www.googleapis.com/upload/drive/v3/files'+(remoteId?'/'+encodeURIComponent(remoteId):'')+'?uploadType=multipart&fields=id,version';
- const result=await request(url,{method:remoteId?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});
+ mark('JSON 직렬화 및 업로드 준비',tEncode);
+ const tUpload=clock();const result=await request(url,{method:remoteId?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+boundary},body});mark('Google Drive 업로드',tUpload);
  remoteId=result.id;
  // Fetch the authoritative Drive revision after each successful upload.
- const current=await request(API+'/'+encodeURIComponent(remoteId)+'?fields=id,version');
+ const tAfter=clock();const current=await request(API+'/'+encodeURIComponent(remoteId)+'?fields=id,version');mark('업로드 후 버전 재조회',tAfter);
  if(!current?.version)throw Error('Drive 저장은 완료되었지만 최신 버전을 확인하지 못했습니다. 지금 동기화 후 다시 시도해 주세요.');
- revision=current.version;snapshot=data;info();await rememberSnapshot();
+ revision=current.version;snapshot=data;info();const tCache=clock();await rememberSnapshot();mark('오프라인 사본 저장',tCache);
+ entry.status='성공';
+ }catch(e){entry.status='실패';throw e}finally{entry.totalMs=elapsed(t0);timingDone(entry)}
 }
 sync.getAll=async store=>{if(!loaded)throw Error('Drive 데이터 로딩 중입니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');return clone(snapshot[store])};
 sync.put=(store,record)=>enqueue(async()=>{
  if(!sync.active)throw Error('로그인이 필요합니다.');if(!['folders','posts'].includes(store)||!record?.id)throw Error('저장 항목이 잘못되었습니다.');
  const next=clone(snapshot),index=next[store].findIndex(x=>x.id===record.id);
  if(index<0)next[store].push(clone(record));else next[store][index]=clone(record);
- await upload(next);return record.id;
+ await upload(next,'추가/수정: '+store);return record.id;
 });
 sync.del=(store,id)=>enqueue(async()=>{
  if(!sync.active)throw Error('로그인이 필요합니다.');if(!['folders','posts'].includes(store))throw Error('지원하지 않는 저장소');
- const next=clone(snapshot);next[store]=next[store].filter(x=>x.id!==id);await upload(next);
+ const next=clone(snapshot);next[store]=next[store].filter(x=>x.id!==id);await upload(next,'삭제: '+store);
 });
 sync.fontUser=async()=>sync.active?'google-drive-account':null;
 sync.fontGet=async()=>{if(!sync.active)throw Error('로그인이 필요합니다.');return clone(snapshot.fontSettings)};
