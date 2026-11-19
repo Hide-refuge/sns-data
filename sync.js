@@ -28,6 +28,8 @@ const setLoggedOutHere=value=>{try{if(value)sessionStorage.setItem(LOGOUT_KEY,'1
 let snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
 // CBH_LOCAL_FIRST_V1: 원격 기준 버전과 미전송 변경은 같은 IndexedDB 트랜잭션에 보존합니다.
 let dirty=false, baseRevision=null, localReady=false;
+// CBH_THREE_WAY_MERGE_V1: 로컬 편집 시작 전의 공통 조상 사본
+let baseSnapshot=null;
 function syncState(){
  const el=$('cbhLocalSyncState');if(!el)return;
  el.textContent=dirty?'이 기기에 Google Drive 미동기화 변경 사항이 있습니다. 지금 동기화를 눌러 업로드하세요.':'Google Drive 미동기화 변경 사항 없음';
@@ -61,23 +63,29 @@ sync.offlineGetAll=async store=>{
 };
 sync.hasOfflineCache=async()=>Boolean(await cacheRead());
 async function rememberSnapshot(){
- try{await cacheWrite({snapshot:clone(snapshot),dirty,baseRevision})}
+ try{await cacheWrite({snapshot:clone(snapshot),dirty,baseRevision,baseSnapshot:baseSnapshot?clone(baseSnapshot):null})}
  catch(e){msg('로컬 저장 실패: '+errorText(e));throw e}
 }
 async function loadLocalState(){
  const saved=await cacheRead();
- if(saved&&saved.snapshot){snapshot=validate(saved.snapshot);dirty=Boolean(saved.dirty);baseRevision=saved.baseRevision??null;localReady=true;return true}
- if(saved){snapshot=validate(saved);dirty=false;baseRevision=null;localReady=true;return true}
+ if(saved&&saved.snapshot){snapshot=validate(saved.snapshot);dirty=Boolean(saved.dirty);baseRevision=saved.baseRevision??null;baseSnapshot=saved.baseSnapshot?validate(saved.baseSnapshot):null;localReady=true;return true}
+ if(saved){snapshot=validate(saved);dirty=false;baseRevision=null;baseSnapshot=null;localReady=true;return true}
  return false;
 }
 async function localEdit(fn){
  if(!localReady)await loadLocalState();
- if(!localReady)throw Error('로컬 데이터가 아직 준비되지 않았습니다. Google 로그인 후 데이터를 불러와 주세요.');
- const before=clone(snapshot),oldDirty=dirty,oldBase=baseRevision;
- if(!dirty)baseRevision=revision;
+ // 새 미리보기 주소처럼 Drive 캐시가 없는 경우에도 첫 로컬 저장을 허용합니다.
+ // 원격 버전은 아직 알 수 없으므로 null로 유지하고, 나중에 수동 동기화 시 충돌을 검사합니다.
+ if(!localReady){
+  snapshot={version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
+  localReady=true;
+  baseRevision=null;
+ }
+ const before=clone(snapshot),oldDirty=dirty,oldBase=baseRevision,oldBaseSnapshot=baseSnapshot?clone(baseSnapshot):null;
+ if(!dirty){baseRevision=revision;baseSnapshot=clone(snapshot);}
  fn(snapshot);dirty=true;
  try{await rememberSnapshot();syncState();info()}
- catch(e){snapshot=before;dirty=oldDirty;baseRevision=oldBase;syncState();throw e}
+ catch(e){snapshot=before;dirty=oldDirty;baseRevision=oldBase;baseSnapshot=oldBaseSnapshot;syncState();throw e}
 }
 
 
@@ -162,7 +170,7 @@ async function download(){
  await locate();
  const next=remoteId?validate(await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media')):{version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
  const previous=clone(snapshot),oldBase=baseRevision;
- snapshot=next;baseRevision=revision;localReady=true;loaded=true;
+ snapshot=next;baseRevision=revision;baseSnapshot=null;localReady=true;loaded=true;
  try{await rememberSnapshot()}catch(e){snapshot=previous;baseRevision=oldBase;throw e}
  info();syncState();
 }
@@ -207,23 +215,218 @@ sync.del=(store,id)=>enqueue(async()=>{
 sync.fontUser=async()=>sync.active?'google-drive-account':null;
 sync.fontGet=async()=>{if(!localReady)await loadLocalState();if(!localReady)throw Error('데이터 로딩 중입니다.');return clone(snapshot.fontSettings)};
 sync.fontPut=value=>enqueue(async()=>{await localEdit(data=>{data.fontSettings=clone(value)})});
+// Three-way merge: only changes relative to the saved common ancestor are applied.
+function mergeThreeWay(base,local,remote){
+ const merged=clone(remote),conflicts=[],stats={added:0,updated:0,deleted:0};
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ for(const store of ['folders','posts']){
+  const a=new Map(base[store].map(x=>[x.id,x]));
+  const l=new Map(local[store].map(x=>[x.id,x]));
+  const r=new Map(remote[store].map(x=>[x.id,x]));
+  for(const id of new Set([...a.keys(),...l.keys()])){
+   const before=a.get(id),after=l.get(id),current=r.get(id);
+   if(same(before,after))continue; // no local change
+   if(same(before,current)){
+    if(after===undefined){r.delete(id);stats.deleted++}
+    else {r.set(id,clone(after));if(before===undefined)stats.added++;else stats.updated++}
+   }else if(!same(after,current)){
+    conflicts.push(store+' / '+id); // same item changed differently, or delete vs edit
+   }
+  }
+  merged[store]=[...r.values()];
+ }
+ const bf=base.fontSettings,lf=local.fontSettings,rf=remote.fontSettings;
+ if(!same(bf,lf)){
+  if(same(bf,rf))merged.fontSettings=clone(lf);
+  else if(!same(lf,rf))conflicts.push('fontSettings');
+ }
+ return {merged,conflicts,stats};
+}
+// CBH_LEGACY_RENAME_RECOVERY_V1: 기준 사본이 없는 과거 변경 중 지정한 단일 이름 변경만 허용.
+async function recoverLegacyTestRename(){
+ if(!remoteId)throw Error('Drive 파일이 없어 기존 폴더 이름을 검증할 수 없습니다.');
+ const remote=validate(await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media'));
+ const local=validate(clone(snapshot));
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ const sortById=arr=>[...arr].sort((a,b)=>a.id.localeCompare(b.id));
+ if(remote.folders.length!==local.folders.length || remote.posts.length!==local.posts.length)
+  throw Error('Drive와 로컬의 항목 개수가 달라 단일 이름 복구를 중단했습니다.');
+ if(!same(sortById(remote.posts),sortById(local.posts)) || !same(remote.fontSettings,local.fontSettings))
+  throw Error('스크랩 또는 폰트 설정 차이가 발견되어 복구를 중단했습니다.');
+ const rMap=new Map(remote.folders.map(x=>[x.id,x]));
+ const lMap=new Map(local.folders.map(x=>[x.id,x]));
+ if(rMap.size!==remote.folders.length||lMap.size!==local.folders.length||rMap.size!==lMap.size)
+  throw Error('폴더 ID 중복 또는 개수 차이가 있습니다.');
+ let targetId=null;
+ for(const [id,oldFolder] of rMap){
+  const newFolder=lMap.get(id);
+  if(!newFolder)throw Error('폴더 ID가 일치하지 않아 복구를 중단했습니다.');
+  if(same(oldFolder,newFolder))continue;
+  const oldWithoutName=clone(oldFolder),newWithoutName=clone(newFolder);
+  delete oldWithoutName.name;delete newWithoutName.name;
+  // Only the specified test folder name may differ, with identical IDs and other fields.
+  if(oldFolder.name!=='LOCAL_TEST_01'||newFolder.name!=='LOCAL_TEST_02'||
+     !same(oldWithoutName,newWithoutName)||targetId!==null)
+   throw Error('예상하지 못한 폴더 변경이 있어 복구를 중단했습니다.');
+  targetId=id;
+ }
+ if(!targetId)throw Error('지정된 폴더 이름 변경을 발견하지 못했습니다.');
+ const next=clone(remote);
+ const target=next.folders.find(x=>x.id===targetId);
+ target.name='LOCAL_TEST_02';
+ const ok=confirm('이전 변경 복구 미리보기\n\n'
+  +'Drive: 폴더 '+remote.folders.length+'개 / 스크랩 '+remote.posts.length+'개\n'
+  +'변경: LOCAL_TEST_01 → LOCAL_TEST_02 (이름만)\n'
+  +'나머지 폴더·스크랩·폰트 설정은 Drive 원본 유지\n\n'
+  +'Google Drive에 업로드하시겠습니까?');
+ if(!ok){msg('이름 변경 복구 취소 · 로컬 자료 유지');return false}
+ await upload(next,'기존 테스트 폴더 이름 복구');
+ dirty=false;baseRevision=revision;baseSnapshot=null;
+ await rememberSnapshot();syncState();return true;
+}
+// CBH_CONFLICT_MODAL_V1: conflicts are resolved per record, never by overwriting the full local snapshot.
+function chooseConflicts(conflicts,base,local,remote){
+ return new Promise(resolve=>{
+  const old=document.getElementById('cbhConflictModal');
+  if(old){resolve(null);return}
+  const shade=document.createElement('div');shade.id='cbhConflictModal';
+  shade.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px';
+  const panel=document.createElement('section');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','데이터 충돌 해결');
+  panel.style.cssText='background:#fff;color:#17212b;border-radius:14px;padding:18px;width:min(620px,100%);max-height:85vh;overflow:auto;box-shadow:0 12px 40px #0005;font:14px/1.5 system-ui,sans-serif';
+  const title=document.createElement('h2');title.textContent='데이터 충돌 해결';title.style.cssText='font-size:20px;margin:0 0 8px';panel.append(title);
+  const help=document.createElement('p');help.textContent='각 항목마다 유지할 변경을 선택하세요. 미선택 상태에서는 업로드할 수 없습니다. 취소하면 로컬 변경은 그대로 유지됩니다.';panel.append(help);
+  const picks=new Map(), controls=[];
+  const mapOf=(data,store)=>new Map(data[store].map(x=>[x.id,x]));
+  const pretty=(record,store)=>{
+   if(record===undefined)return '삭제됨';
+   const label=record.name||record.title||record.id||'항목';
+   return String(label).slice(0,120);
+  };
+  const entries=conflicts.map((key,i)=>{
+   if(key==='fontSettings')return {key,store:null,id:null,localValue:local.fontSettings,remoteValue:remote.fontSettings,baseValue:base.fontSettings};
+   const sep=key.indexOf(' / ');if(sep<0)throw Error('알 수 없는 충돌 유형');
+   const store=key.slice(0,sep),id=key.slice(sep+3);
+   if(!['folders','posts'].includes(store))throw Error('알 수 없는 충돌 저장소');
+   return {key,store,id,localValue:mapOf(local,store).get(id),remoteValue:mapOf(remote,store).get(id),baseValue:mapOf(base,store).get(id)};
+  });
+  for(const [i,item] of entries.entries()){
+   const section=document.createElement('div');section.style.cssText='border:1px solid #cbd5e1;border-radius:10px;padding:12px;margin:12px 0';
+   const heading=document.createElement('strong');heading.textContent=(i+1)+'. '+(item.store==='folders'?'폴더':item.store==='posts'?'스크랩':'폰트 설정')+' 충돌';section.append(heading);
+   const baseLine=document.createElement('p');baseLine.style.cssText='font-size:12px;color:#475569;overflow-wrap:anywhere';
+   baseLine.textContent='수정 전: '+(item.store?pretty(item.baseValue,item.store):'기존 폰트 설정');section.append(baseLine);
+   const group=document.createElement('div');group.style.cssText='display:grid;gap:8px';
+   const makeOption=(value,text)=>{
+    const label=document.createElement('label');label.style.cssText='display:block;padding:10px;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;overflow-wrap:anywhere';
+    const radio=document.createElement('input');radio.type='radio';radio.name='cbh_conflict_'+i;radio.value=value;radio.style.marginRight='8px';
+    radio.onchange=()=>{picks.set(item.key,value);refresh()};label.append(radio,document.createTextNode(text));group.append(label);
+   };
+   const labelLocal=item.store?pretty(item.localValue,item.store):'이 기기의 폰트 설정';
+   const labelRemote=item.store?pretty(item.remoteValue,item.store):'Google Drive 폰트 설정';
+   makeOption('local','이 기기 변경 유지: '+labelLocal);
+   makeOption('remote','Google Drive 변경 유지: '+labelRemote);
+   section.append(group);
+   if(item.store==='folders'&&(item.localValue===undefined||item.remoteValue===undefined)){
+    const warning=document.createElement('p');warning.style.cssText='color:#9a3412;font-weight:600';warning.textContent='폴더 삭제를 선택하면 연결된 스크랩 표시나 분류에 영향이 있을 수 있습니다. 삭제 전에 관련 스크랩을 확인하세요.';section.append(warning);
+   }
+   if(item.store===null){const warning=document.createElement('p');warning.textContent='폰트 설정은 전체 설정 단위로 선택합니다. 개별 규칙 병합은 지원하지 않습니다.';section.append(warning)}
+   panel.append(section);
+  }
+  const status=document.createElement('p');panel.append(status);
+  const actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='나중에 결정';cancel.style.cssText='padding:10px 14px;border:1px solid #94a3b8;border-radius:8px;background:#fff;color:#17212b';
+  const apply=document.createElement('button');apply.type='button';apply.textContent='선택 사항 확인';apply.style.cssText='padding:10px 14px;border:0;border-radius:8px;background:#174d85;color:white';
+  actions.append(cancel,apply);panel.append(actions);shade.append(panel);document.body.append(shade);
+  const previousFocus=document.activeElement;
+  const finish=value=>{document.removeEventListener('keydown',onKey);shade.remove();try{previousFocus?.focus()}catch{}resolve(value)};
+  const onKey=e=>{if(e.key==='Escape'){e.preventDefault();finish(null)}else if(e.key==='Tab'){
+   const focusable=[...panel.querySelectorAll('input:not(:disabled),button:not(:disabled)')];if(!focusable.length)return;
+   const first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+  }};
+  document.addEventListener('keydown',onKey);cancel.onclick=()=>finish(null);
+  function refresh(){status.textContent='선택 완료: '+picks.size+' / '+entries.length;apply.disabled=picks.size!==entries.length;apply.style.opacity=apply.disabled?'.45':'1'}
+  refresh();cancel.focus();
+  apply.onclick=()=>{
+   if(picks.size!==entries.length)return;
+   const deletions=entries.filter(x=>picks.get(x.key)==='local'&&x.localValue===undefined||picks.get(x.key)==='remote'&&x.remoteValue===undefined);
+   const summary=entries.map(x=>(x.store==='folders'?'폴더':x.store==='posts'?'스크랩':'폰트')+' · '+(picks.get(x.key)==='local'?'이 기기':'Google Drive')+' 유지').join('\n');
+   if(deletions.length&&!confirm('삭제되는 충돌 항목 '+deletions.length+'개가 있습니다. 연결된 스크랩에 영향이 있을 수 있습니다. 계속하시겠습니까?'))return;
+   if(!confirm('충돌 해결 최종 확인\n\n'+summary+'\n\n선택 사항을 병합 미리보기에 반영하시겠습니까?'))return;
+   finish(Object.fromEntries(picks));
+  };
+ });
+}
+
 async function uploadPending(){
  if(!sync.active)throw Error('Google 로그인 후 동기화해 주세요.');
  if(!localReady)await loadLocalState();
  if(!dirty)return false;
- // 변경 시작 시점의 버전을 반드시 비교합니다. 기존 upload()도 현재 revision을 재검사합니다.
  await locate();
- if(String(revision??'')!==String(baseRevision??''))throw Error('다른 기기에서 Drive 데이터가 변경되었습니다. 로컬 자료는 보존했습니다. 자동 덮어쓰기를 중단합니다.');
- await upload(clone(snapshot),'수동 동기화');
- dirty=false;baseRevision=revision;
- // 업로드 성공 뒤 로컬 완료 표시 저장이 실패해도 다음 시도에서 덮어쓰지 않도록 알립니다.
+ let next=clone(snapshot),operation='수동 동기화';
+ if(String(revision??'')!==String(baseRevision??'')){
+  if(!baseSnapshot){
+   if(baseRevision!==null)return await recoverLegacyTestRename();
+   // Legacy first-use only: baseRevision null permits additive merge, but no edits/deletions.
+   if(baseRevision!==null)throw Error('기존 미동기화 수정에는 기준 사본이 없습니다. 로컬 자료를 보존하고 자동 병합을 중단했습니다.');
+   const remote=remoteId?validate(await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media')):{version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
+   const merged=clone(remote);let added=0;
+   for(const store of ['folders','posts']){
+    const m=new Map(remote[store].map(x=>[x.id,x]));
+    for(const item of snapshot[store]){
+     if(m.has(item.id)){
+      if(JSON.stringify(m.get(item.id))!==JSON.stringify(item))throw Error('기존 항목과 다른 내용이 발견되어 최초 병합을 중단했습니다.');
+     }else{merged[store].push(clone(item));added++}
+    }
+   }
+   if(snapshot.fontSettings!=null){
+    if(remote.fontSettings==null)merged.fontSettings=clone(snapshot.fontSettings);
+    else if(JSON.stringify(snapshot.fontSettings)!==JSON.stringify(remote.fontSettings))throw Error('폰트 설정 충돌로 병합을 중단했습니다.');
+   }
+   if(!confirm('최초 추가 병합: 새 항목 '+added+'개 / 결과 폴더 '+merged.folders.length+'개, 스크랩 '+merged.posts.length+'개. 업로드하시겠습니까?'))return false;
+   await upload(merged,'최초 추가 병합');dirty=false;baseRevision=revision;baseSnapshot=null;await rememberSnapshot();syncState();return true;
+  }
+  const remote=remoteId?validate(await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media')):{version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
+  const result=mergeThreeWay(baseSnapshot,snapshot,remote);
+  const conflictCount=result.conflicts.length;
+  // CBH_CONFLICT_MODAL_V1: 각 충돌 항목을 로컬 또는 Drive 기준으로 선택합니다.
+  if(result.conflicts.length){
+   const decisions=await chooseConflicts(result.conflicts,baseSnapshot,snapshot,remote);
+   if(!decisions){msg('충돌 해결 취소 · 로컬 변경 유지');return false}
+   for(const key of result.conflicts){
+    const selected=decisions[key];
+    if(selected!=='local'&&selected!=='remote')throw Error('충돌 항목의 선택 값이 올바르지 않습니다.');
+    if(key==='fontSettings'){
+     result.merged.fontSettings=clone(selected==='local'?snapshot.fontSettings:remote.fontSettings);
+     continue;
+    }
+    const sep=key.indexOf(' / '),store=key.slice(0,sep),id=key.slice(sep+3);
+    if(!['folders','posts'].includes(store))throw Error('알 수 없는 충돌 유형');
+    const source=selected==='local'?snapshot:remote;
+    const record=source[store].find(x=>x.id===id);
+    const list=result.merged[store],index=list.findIndex(x=>x.id===id);
+    if(index>=0)list.splice(index,1);
+    if(record!==undefined)list.push(clone(record));
+   }
+   result.conflicts.length=0;
+  }
+  const {added,updated,deleted}=result.stats;
+  const ok=confirm('Google Drive 안전 병합 미리보기\n\n'
+   +'Drive: 폴더 '+remote.folders.length+'개, 스크랩 '+remote.posts.length+'개\n'
+   +'병합 후: 폴더 '+result.merged.folders.length+'개, 스크랩 '+result.merged.posts.length+'개\n'
+   +'충돌 항목 선택: '+conflictCount+'건\n'+'충돌 없는 로컬 변경: 추가 '+added+' / 수정 '+updated+' / 삭제 '+deleted+'\n\n'
+   +'다른 기기의 변경은 유지합니다. 업로드하시겠습니까?');
+  if(!ok){msg('병합 취소 · 로컬 변경 유지');return false}
+  next=result.merged;operation='항목별 안전 병합';
+ }
+ // upload() verifies the revision again immediately before upload.
+ await upload(next,operation);
+ dirty=false;baseRevision=revision;baseSnapshot=null;
  await rememberSnapshot();syncState();return true;
 }
 async function reload(){
  if(busy)return;busy=true;
  try{
   await work;
-  if(dirty){await enqueue(uploadPending);msg('Google Drive 업로드 완료 · '+new Date().toLocaleTimeString('ko-KR'))}
+  if(dirty){const done=await enqueue(uploadPending);if(done)msg('Google Drive 업로드 완료 · '+new Date().toLocaleTimeString('ko-KR'))}
   else{await download();msg('Google Drive 최신 데이터 확인 완료 · '+new Date().toLocaleTimeString('ko-KR'))}
   await window.scrapRefresh?.();await window.scrapFontCloudRefresh?.();syncState();
  }catch(e){msg('동기화 중단: '+errorText(e));alert('동기화 중단: '+errorText(e)+'\n로컬 변경 사항은 유지됩니다.')}
