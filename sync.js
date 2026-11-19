@@ -242,48 +242,6 @@ function mergeThreeWay(base,local,remote){
  }
  return {merged,conflicts,stats};
 }
-// CBH_LEGACY_RENAME_RECOVERY_V1: 기준 사본이 없는 과거 변경 중 지정한 단일 이름 변경만 허용.
-async function recoverLegacyTestRename(){
- if(!remoteId)throw Error('Drive 파일이 없어 기존 폴더 이름을 검증할 수 없습니다.');
- const remote=validate(await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media'));
- const local=validate(clone(snapshot));
- const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
- const sortById=arr=>[...arr].sort((a,b)=>a.id.localeCompare(b.id));
- if(remote.folders.length!==local.folders.length || remote.posts.length!==local.posts.length)
-  throw Error('Drive와 로컬의 항목 개수가 달라 단일 이름 복구를 중단했습니다.');
- if(!same(sortById(remote.posts),sortById(local.posts)) || !same(remote.fontSettings,local.fontSettings))
-  throw Error('스크랩 또는 폰트 설정 차이가 발견되어 복구를 중단했습니다.');
- const rMap=new Map(remote.folders.map(x=>[x.id,x]));
- const lMap=new Map(local.folders.map(x=>[x.id,x]));
- if(rMap.size!==remote.folders.length||lMap.size!==local.folders.length||rMap.size!==lMap.size)
-  throw Error('폴더 ID 중복 또는 개수 차이가 있습니다.');
- let targetId=null;
- for(const [id,oldFolder] of rMap){
-  const newFolder=lMap.get(id);
-  if(!newFolder)throw Error('폴더 ID가 일치하지 않아 복구를 중단했습니다.');
-  if(same(oldFolder,newFolder))continue;
-  const oldWithoutName=clone(oldFolder),newWithoutName=clone(newFolder);
-  delete oldWithoutName.name;delete newWithoutName.name;
-  // Only the specified test folder name may differ, with identical IDs and other fields.
-  if(oldFolder.name!=='LOCAL_TEST_01'||newFolder.name!=='LOCAL_TEST_02'||
-     !same(oldWithoutName,newWithoutName)||targetId!==null)
-   throw Error('예상하지 못한 폴더 변경이 있어 복구를 중단했습니다.');
-  targetId=id;
- }
- if(!targetId)throw Error('지정된 폴더 이름 변경을 발견하지 못했습니다.');
- const next=clone(remote);
- const target=next.folders.find(x=>x.id===targetId);
- target.name='LOCAL_TEST_02';
- const ok=confirm('이전 변경 복구 미리보기\n\n'
-  +'Drive: 폴더 '+remote.folders.length+'개 / 스크랩 '+remote.posts.length+'개\n'
-  +'변경: LOCAL_TEST_01 → LOCAL_TEST_02 (이름만)\n'
-  +'나머지 폴더·스크랩·폰트 설정은 Drive 원본 유지\n\n'
-  +'Google Drive에 업로드하시겠습니까?');
- if(!ok){msg('이름 변경 복구 취소 · 로컬 자료 유지');return false}
- await upload(next,'기존 테스트 폴더 이름 복구');
- dirty=false;baseRevision=revision;baseSnapshot=null;
- await rememberSnapshot();syncState();return true;
-}
 // CBH_CONFLICT_MODAL_V1: conflicts are resolved per record, never by overwriting the full local snapshot.
 function chooseConflicts(conflicts,base,local,remote){
  return new Promise(resolve=>{
@@ -364,9 +322,8 @@ async function uploadPending(){
  let next=clone(snapshot),operation='수동 동기화';
  if(String(revision??'')!==String(baseRevision??'')){
   if(!baseSnapshot){
-   if(baseRevision!==null)return await recoverLegacyTestRename();
-   // Legacy first-use only: baseRevision null permits additive merge, but no edits/deletions.
-   if(baseRevision!==null)throw Error('기존 미동기화 수정에는 기준 사본이 없습니다. 로컬 자료를 보존하고 자동 병합을 중단했습니다.');
+   if(baseRevision!==null)throw Error('기준 사본이 없는 기존 미동기화 수정은 안전하게 자동 병합할 수 없습니다. 로컬 자료를 보존하고 동기화를 중단했습니다.');
+   // 최초 추가 병합: 기존 항목 수정 및 삭제는 허용하지 않습니다.
    const remote=remoteId?validate(await request(API+'/'+encodeURIComponent(remoteId)+'?alt=media')):{version:1,folders:[],posts:[],fontSettings:null,modifiedAt:null};
    const merged=clone(remote);let added=0;
    for(const store of ['folders','posts']){
