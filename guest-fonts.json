@@ -1,0 +1,307 @@
+{
+  "fonts": [
+    {
+      "id": "system",
+      "name": "기본 글꼴",
+      "family": "system-ui",
+      "weights": [
+        400,
+        500,
+        600,
+        700
+      ]
+    },
+    {
+      "id": "noto",
+      "name": "Noto Sans KR",
+      "family": "Noto Sans KR",
+      "css": "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap",
+      "weights": [
+        400,
+        500,
+        600,
+        700
+      ]
+    },
+    {
+      "id": "nanum",
+      "name": "Nanum Gothic",
+      "family": "Nanum Gothic",
+      "css": "https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap",
+      "weights": [
+        400,
+        700
+      ]
+    },
+    {
+      "id": "custom-32220d4a-5c80-4cae-a592-d9b62f499602",
+      "name": "을유1945",
+      "family": "Eulyoo1945",
+      "category": "바탕",
+      "files": [
+        {
+          "path": "fonts/Eulyoo1945/Eulyoo1945-Regular.otf",
+          "weight": 400
+        },
+        {
+          "path": "fonts/Eulyoo1945/Eulyoo1945-SemiBold.otf",
+          "weight": 600
+        }
+      ],
+      "weights": [
+        400,
+        600
+      ]
+    },
+    {
+      "id": "custom-ddf38480-a6d2-4d99-b6b3-654a3e4bfb78",
+      "name": "그리운 한글 방우리",
+      "family": "GriunBanguri",
+      "category": "장식체",
+      "path": "fonts/GriunXHangeul_Banguri-Rg.ttf",
+      "weights": [
+        400
+      ]
+    },
+    {
+      "id": "custom-a0a5e517-2985-44e4-93a0-4165fa5d9a6e",
+      "name": "Mona 10",
+      "family": "Mona10",
+      "category": "픽셀체",
+      "path": "fonts/Mona/Mona10.ttf",
+      "weights": [
+        400
+      ]
+    },
+    {
+      "id": "custom-38c9bf96-0aea-4fd4-a785-cb372920815c",
+      "name": "Mona 10×12",
+      "family": "Mona10x12",
+      "category": "픽셀체",
+      "path": "fonts/Mona/Mona10x12.ttf",
+      "weights": [
+        400
+      ]
+    },
+    {
+      "id": "custom-348a3aa4-b8b1-432e-8730-e5f1518c6d5e",
+      "name": "Mona 12",
+      "family": "Mona12",
+      "category": "픽셀체",
+      "path": "fonts/Mona/Mona12.ttf",
+      "weights": [
+        400
+      ]
+    },
+    {
+      "id": "custom-c54890c0-fbad-4c30-8c5d-efbc07cf9a15",
+      "name": "Paperlogy",
+      "family": "Paperlogy",
+      "category": "고딕",
+      "files": [
+        {
+          "path": "fonts/Paperlogy/Paperlogy-1Thin.ttf",
+          "weight": 100
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-2ExtraLight.ttf",
+          "weight": 200
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-3Light.ttf",
+          "weight": 300
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-4Regular.ttf",
+          "weight": 400
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-5Medium.ttf",
+          "weight": 500
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-6SemiBold.ttf",
+          "weight": 600
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-7Bold.ttf",
+          "weight": 700
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-8ExtraBold.ttf",
+          "weight": 800
+        },
+        {
+          "path": "fonts/Paperlogy/Paperlogy-9Black.ttf",
+          "weight": 900
+        }
+      ],
+      "weights": [
+        100,
+        200,
+        300,
+        400,
+        500,
+        600,
+        700,
+        800,
+        900
+      ]
+    },
+    {
+      "id": "custom-3e07ad69-a094-45c4-8d41-7f1a2c8a82cd",
+      "name": "Pretendard",
+      "family": "Pretendard",
+      "category": "고딕",
+      "files": [
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-Thin.woff2",
+          "weight": 100
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-ExtraLight.woff2",
+          "weight": 200
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-Light.woff2",
+          "weight": 300
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-Regular.woff2",
+          "weight": 400
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-Medium.woff2",
+          "weight": 500
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-SemiBold.woff2",
+          "weight": 600
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-Bold.woff2",
+          "weight": 700
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-ExtraBold.woff2",
+          "weight": 800
+        },
+        {
+          "path": "fonts/Pretendard_otf/Pretendard-Black.woff2",
+          "weight": 900
+        }
+      ],
+      "weights": [
+        100,
+        200,
+        300,
+        400,
+        500,
+        600,
+        700,
+        800,
+        900
+      ]
+    },
+    {
+      "id": "custom-261bb5c9-3f5e-49f4-9af7-3d1e1c074f91",
+      "name": "평창평화체",
+      "family": "PyeongChangPeace",
+      "category": "장식체",
+      "files": [
+        {
+          "path": "fonts/PyeongChangPeace/PyeongChangPeace-Light.ttf",
+          "weight": 300
+        },
+        {
+          "path": "fonts/PyeongChangPeace/PyeongChangPeace-Bold.ttf",
+          "weight": 700
+        }
+      ],
+      "weights": [
+        300,
+        700
+      ]
+    },
+    {
+      "id": "custom-169eb075-3394-4543-a053-cd69a80b2d9d",
+      "name": "김좌진장군체",
+      "family": "GeneralKimJwajin",
+      "category": "장식체",
+      "files": [
+        {
+          "path": "fonts/k7General/GeneralKimJwajin_Regular.ttf",
+          "weight": 400
+        },
+        {
+          "path": "fonts/k7General/GeneralKimJwajin_Bold.ttf",
+          "weight": 700
+        }
+      ],
+      "weights": [
+        400,
+        700
+      ]
+    },
+    {
+      "id": "custom-3b6b1b5f-400a-48cb-91b9-7f010169c72f",
+      "name": "카페24 클래식타입",
+      "family": "Cafe24Classictype",
+      "category": "장식체",
+      "path": "fonts/cafe24/Cafe24Classictype-v1.1.ttf",
+      "weights": [
+        400
+      ]
+    },
+    {
+      "id": "custom-fede4b2a-30fb-41a7-aea2-3e5f16f95017",
+      "name": "카페24 아네모네 에어",
+      "family": "Cafe24OhsquareAir",
+      "category": "고딕",
+      "path": "fonts/cafe24/Cafe24OhsquareAir-v2.0.ttf",
+      "weights": [
+        400
+      ]
+    },
+    {
+      "id": "custom-90fae4fb-6381-4fbe-8703-37c7f13617f1",
+      "name": "카페24 PROUP",
+      "family": "Cafe24PROUP",
+      "category": "장식체",
+      "path": "fonts/cafe24/Cafe24PROUP.ttf",
+      "weights": [
+        400
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "scope": "folder",
+      "target": "2b24cf9b-ad84-423a-8a09-f5e7048581f7",
+      "fontId": "custom-c54890c0-fbad-4c30-8c5d-efbc07cf9a15",
+      "weight": 500,
+      "updated": 1794368755571
+    },
+    {
+      "scope": "header",
+      "target": "*",
+      "fontId": "custom-90fae4fb-6381-4fbe-8703-37c7f13617f1",
+      "weight": 400,
+      "updated": 1794376176162
+    },
+    {
+      "scope": "all",
+      "target": "*",
+      "fontId": "custom-c54890c0-fbad-4c30-8c5d-efbc07cf9a15",
+      "weight": 400,
+      "updated": 1795053691853
+    },
+    {
+      "scope": "folder",
+      "target": "9c1b3cc8-92e1-42db-948e-f9d99fad2bb2",
+      "fontId": "custom-c54890c0-fbad-4c30-8c5d-efbc07cf9a15",
+      "weight": 700,
+      "updated": 1795057354044
+    }
+  ]
+}
