@@ -13,6 +13,44 @@ const css=document.createElement('style');css.textContent=`
 .cbh-api-panel textarea{min-height:90px;resize:vertical}.cbh-api-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .cbh-api-panel .cbh-api-help{font-size:12px;color:#667085;line-height:1.6}.cbh-api-status{font-size:13px;white-space:pre-wrap}
 .cbh-api-output{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f7fc;border:1px solid #e4e7ef;border-radius:10px;padding:12px;max-height:240px;overflow:auto;font-size:13px}
+
+/* API Settings: responsive control text */
+.cbh-api-panel .cbh-api-actions .btn,
+.cbh-api-panel #cbhApiProvider,
+.cbh-api-panel #cbhApiKey,
+.cbh-api-panel #cbhApiPrompt {
+  font-size: clamp(13px, 2.5vw, 13.5px) !important;
+}
+
+.cbh-api-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.cbh-api-header h2{margin:0}
+.cbh-api-close{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+  padding:0;
+  border:1px solid #dfe3ed;
+  border-radius:10px;
+  background:#fff;
+  color:#293142;
+  font-size:24px;
+  line-height:1;
+  cursor:pointer;
+}
+.cbh-api-close:hover{background:#f5f7fc}
+.cbh-api-close:focus-visible{
+  outline:2px solid #4b62cc;
+  outline-offset:2px;
+}
 `;document.head.append(css);
 function waitGoogle(){return new Promise((resolve,reject)=>{if(window.google?.accounts?.id)return resolve();const old=document.querySelector('script[data-cbh-gis]');if(old){old.addEventListener('load',resolve,{once:true});old.addEventListener('error',reject,{once:true});return}const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.dataset.cbhGis='1';s.onload=resolve;s.onerror=reject;document.head.append(s)})}
 async function request(path,data={}){
@@ -24,8 +62,12 @@ async function request(path,data={}){
 }
 function open(){
  if(document.getElementById('cbhApiOverlay'))return;
+ const drawer = document.getElementById('archiveMenuDrawer');
+if (drawer && !drawer.hidden) {
+  drawer.querySelector('.archive-menu-close')?.click();
+}
  const overlay=document.createElement('div');overlay.id='cbhApiOverlay';overlay.className='cbh-api-overlay';
- overlay.innerHTML=`<section class="cbh-api-panel" role="dialog" aria-modal="true" aria-labelledby="cbhApiTitle"><h2 id="cbhApiTitle">API Settings</h2>
+ overlay.innerHTML=`<section class="cbh-api-panel" role="dialog" aria-modal="true" aria-labelledby="cbhApiTitle"><div class="cbh-api-header"><h2 id="cbhApiTitle">API Settings</h2><button id="cbhApiClose" type="button" class="cbh-api-close" aria-label="닫기">×</button></div>
  <p class="cbh-api-help">Claude와 OpenAI 모두 API 키를 직접 입력해야 합니다. Google 관리자 인증은 계속 필요합니다.</p>
  <div id="cbhGoogleSignIn"></div><p id="cbhApiStatus" class="cbh-api-status" role="status">${idToken?'관리자 인증 정보가 있습니다. 연결 상태를 확인해 주세요.':'Google 관리자 인증이 필요합니다.'}</p>
  <label for="cbhApiProvider">AI 서비스</label><select id="cbhApiProvider"><option value="claude">Claude (Anthropic)</option><option value="openai">OpenAI</option></select>
@@ -34,7 +76,7 @@ function open(){
  <p class="cbh-api-help" id="cbhApiKeyInfo">키는 현재 탭의 메모리에만 보관되며 새로고침하면 사라집니다. GitHub·Google Drive에 저장되지 않습니다.</p>
  <div class="cbh-api-actions"><button class="btn" id="cbhApiStatusBtn" type="button">서버 연결 확인</button><button class="btn" id="cbhApiTest" type="button">선택한 API 연결 테스트</button></div>
  <label for="cbhApiPrompt">AI 요청 (테스트용)</label><textarea id="cbhApiPrompt" maxlength="4000" placeholder="예: 이 문장을 한 문장으로 요약해 주세요."></textarea>
- <div class="cbh-api-actions"><button class="btn primary" id="cbhApiRun" type="button">AI 요청 실행</button><button class="btn" id="cbhApiLogout" type="button">관리자 인증 해제</button><button class="btn" id="cbhApiClose" type="button">닫기</button></div>
+ <div class="cbh-api-actions"><button class="btn primary" id="cbhApiRun" type="button">AI 요청 실행</button><button class="btn" id="cbhApiLogout" type="button">관리자 인증 해제</button></div>
  <div id="cbhApiOutput" class="cbh-api-output" aria-live="polite">${lastResponse?'이전 응답은 팝업을 다시 열면 표시되지 않습니다.':'응답 대기 중'}</div>
  <p class="cbh-api-help">연결 테스트와 AI 요청은 실제 API 사용량으로 청구될 수 있습니다. 입력한 키는 관리자 인증 후 HTTPS로 Worker에 전송됩니다.</p></section>`;
  document.body.append(overlay);
