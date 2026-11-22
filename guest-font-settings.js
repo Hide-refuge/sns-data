@@ -1,0 +1,495 @@
+/* Font settings extension for SNS Scrap Hub. No existing scrap records are changed. */
+(()=>{'use strict';
+const KEY='scrap-font-settings-v1';
+const FONT_CATEGORIES=['고딕','바탕','손글씨','장식체','픽셀체','캘리폰츠','코딩체','기타 언어'];
+function defaultCategory(f){
+ const n=(f.name+' '+f.family).toLowerCase();
+ if(f.id==='system'||f.id==='noto'||f.id==='nanum'||/pretendard|paperlogy|retrosans/.test(n))return '고딕';
+ if(/eulyoo|을유/.test(n))return '바탕';
+ if(/mona/.test(n))return '픽셀체';
+ return '장식체';
+}
+function categoryOf(f){return FONT_CATEGORIES.includes(f.category)?f.category:defaultCategory(f)}
+function categoryOptions(current){return FONT_CATEGORIES.map(c=>`<option value="${esc(c)}" ${current===c?'selected':''}>${esc(c)}</option>`).join('')}
+
+const defaults={fonts:[{id:'system',name:'기본 글꼴',family:'system-ui',weights:[400,500,600,700]},{id:'noto',name:'Noto Sans KR',family:'Noto Sans KR',css:'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap',weights:[400,500,600,700]},{id:'nanum',name:'Nanum Gothic',family:'Nanum Gothic',css:'https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap',weights:[400,700]}],rules:[]};
+let state=loadLocal(),activeUser=null,fetching=false,selected=new Set(),scope='all',dialogOpen=false;
+let recoveryPending=false, cloudSnapshot=null, lastCloudSignature=null, lastCloudUser=null;
+const fontVersions=new Map();
+function loadLocal(){return structuredClone(defaults)}
+function sanitize(v){if(!v||typeof v!=='object')return structuredClone(defaults);const fonts=[...defaults.fonts];for(const f of Array.isArray(v.fonts)?v.fonts:[]){if(f&&typeof f.id==='string'&&f.id.startsWith('custom-')&&(validCSS(f.css)||validFontPath(f.path)||(Array.isArray(f.files)&&f.files.length>=2))&&typeof f.name==='string'&&typeof f.family==='string')fonts.push({id:f.id,name:f.name.slice(0,80),family:f.family.slice(0,100),category:FONT_CATEGORIES.includes(f.category)?f.category:defaultCategory(f),css:validCSS(f.css)?f.css:undefined,path:validFontPath(f.path)?f.path:undefined,files:Array.isArray(f.files)?f.files.filter(x=>x&&validFontPath(x.path)&&[100,200,300,400,500,600,700,800,900].includes(Number(x.weight))).slice(0,9).map(x=>({path:x.path,weight:Number(x.weight)})):undefined,weights:validWeights(f.weights)})}const rules=(Array.isArray(v.rules)?v.rules:[]).filter(r=>r&&['all','platform','folder','keyword','post','header'].includes(r.scope)&&typeof r.fontId==='string'&&typeof r.target==='string').map(r=>({scope:r.scope,target:r.target,fontId:r.fontId,weight:Number(r.weight)||400,updated:Number(r.updated)||0}));return {fonts,rules}}
+// Keep a separate, non-destructive recovery copy for each successful font save.
+const RECOVERY_KEY='scrap-font-settings-recovery-v1';
+function hasCustom(v){return !!v?.fonts?.some(f=>typeof f.id==='string'&&f.id.startsWith('custom-'))}
+function snapshot(v){if(window.SCRAP_GUEST_MODE)return;
+ if(!hasCustom(v))return;
+ try{
+  const existing=JSON.parse(localStorage.getItem(RECOVERY_KEY)||'[]');
+  const copies=Array.isArray(existing)?existing:[];
+  const data=JSON.stringify(v);
+  if(!copies.length||JSON.stringify(copies[0].data)!==data){
+   copies.unshift({at:new Date().toISOString(),data:structuredClone(v)});
+   localStorage.setItem(RECOVERY_KEY,JSON.stringify(copies.slice(0,8)));
+  }
+ }catch(e){console.warn('Font recovery snapshot failed:',e)}
+}
+function recoveryCandidates(){
+ const list=[];
+ try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(hasCustom(sanitize(v)))list.push({label:'이 기기의 기존 로컬 저장본',data:sanitize(v)})}catch{}
+ try{const copies=JSON.parse(localStorage.getItem(RECOVERY_KEY)||'[]');for(const item of Array.isArray(copies)?copies:[]){const v=sanitize(item.data);if(hasCustom(v))list.push({label:'자동 보관본 '+new Date(item.at).toLocaleString('ko-KR'),data:v})}}catch{}
+ return list;
+}
+function drawRecovery(){
+ const el=document.getElementById('fontRecoveryArea');if(!el)return;
+ const candidates=recoveryCandidates();
+ const current=customFonts().length;
+ el.innerHTML=`<div class="hint">현재 표시 중인 사용자 폰트: ${current}개 · 로컬 복구 후보: ${candidates.length}개${recoveryPending?' · 클라우드가 비어 있어 로컬 사본을 임시 표시 중':''}</div><button type="button" class="btn" id="fontRecoveryCheck">저장된 폰트 복구본 확인</button><div id="fontRecoveryOptions" class="hint"></div>`;
+ el.querySelector('#fontRecoveryCheck').onclick=()=>{
+  const target=el.querySelector('#fontRecoveryOptions');
+  target.innerHTML=candidates.length?'<p>복구할 사본을 선택하세요. 확인 전에는 클라우드에 저장하지 않습니다.</p>'+candidates.map((c,i)=>`<button type="button" class="btn" data-recovery="${i}">${esc(c.label)} (${c.data.fonts.filter(f=>f.id.startsWith('custom-')).length}개)</button>`).join(' '):'<p>이 브라우저에는 복구할 로컬 폰트 정보가 없습니다. Supabase의 scrap_font_settings 데이터 또는 다른 기기의 브라우저 저장본을 확인해야 합니다.</p>';
+  target.querySelectorAll('[data-recovery]').forEach(b=>b.onclick=async()=>{
+   const candidate=candidates[Number(b.dataset.recovery)];if(!candidate)return;
+   const existing=customFonts();const incoming=candidate.data.fonts.filter(f=>f.id.startsWith('custom-'));
+   const merged=structuredClone(state);const ids=new Set(merged.fonts.map(f=>f.id));
+   for(const f of incoming)if(!ids.has(f.id)){merged.fonts.push(f);ids.add(f.id)}
+   const ruleKeys=new Set(merged.rules.map(r=>`${r.scope}|${r.target}|${r.fontId}|${r.updated}`));
+   for(const r of candidate.data.rules){const key=`${r.scope}|${r.target}|${r.fontId}|${r.updated}`;if(ids.has(r.fontId)&&!ruleKeys.has(key)){merged.rules.push(r);ruleKeys.add(key)}}
+   const added=merged.fonts.length-state.fonts.length;
+   if(!added){alert('선택한 사본의 폰트가 이미 현재 목록에 있습니다.');return}
+   if(!confirm(`폰트 ${added}개를 현재 목록에 복구합니다. ${window.scrapSync?.active?'현재 로그인한 Supabase 계정에도 저장됩니다.':'이 브라우저에 저장됩니다.'} 계속하시겠습니까?`))return;
+   snapshot(state);const before=structuredClone(state);state=merged;
+   if(await save()){recoveryPending=false;alert('폰트 정보가 복구되었습니다.');open()}else{state=before;rerender()}
+  });
+ };
+}
+function validWeights(w){const allowed=[100,200,300,400,500,600,700,800,900];return [...new Set((Array.isArray(w)?w:[400]).map(Number).filter(n=>allowed.includes(n)))].sort((a,b)=>a-b).slice(0,9)}
+function validCSS(u){try{const x=new URL(u);return x.protocol==='https:'&&['fonts.googleapis.com','cdn.jsdelivr.net','cdnjs.cloudflare.com'].includes(x.hostname)&&x.href.length<1400}catch{return false}}
+// Files must be uploaded separately to the GitHub Pages repository's fonts/ folder.
+// Reject traversal, external URLs and unsafe characters; only local webfont files are accepted.
+function validFontPath(path){return typeof path==='string'&&/^(?:(?:[A-Za-z0-9_-]+)\/)+[A-Za-z0-9_-][A-Za-z0-9_.-]*\.(?:woff2|woff|ttf|otf)$/i.test(path)&&path.length<=200&&!path.split('/').some(x=>x==='.'||x==='..')}
+function fontFormat(path){return path.toLowerCase().endsWith('.woff2')?'woff2':path.toLowerCase().endsWith('.woff')?'woff':path.toLowerCase().endsWith('.ttf')?'truetype':'opentype'}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function font(id){return state.fonts.find(f=>f.id===id)||state.fonts[0]}
+function fileURL(path,id){const url=new URL(path,document.baseURI);const version=fontVersions.get(id);if(version)url.searchParams.set('fontrev',version);return url.href}
+function installFonts(){
+ document.querySelectorAll('link[data-scrap-font],style[data-scrap-font]').forEach(n=>n.remove());
+ for(const f of state.fonts){
+  if(Array.isArray(f.files)&&f.files.length>=2){for(const file of f.files){if(!validFontPath(file.path))continue;const st=document.createElement('style');st.dataset.scrapFont=f.id;st.textContent=`@font-face{font-family:${JSON.stringify(f.family)};src:url(${JSON.stringify(fileURL(file.path,f.id))}) format('${fontFormat(file.path)}');font-style:normal;font-weight:${file.weight};font-display:swap}`;document.head.append(st)}}else if(f.path&&validFontPath(f.path)){
+   const style=document.createElement('style');style.dataset.scrapFont=f.id;
+   const family=JSON.stringify(f.family),url=JSON.stringify(fileURL(f.path,f.id)),format=fontFormat(f.path);
+   // Each registered file is assigned its declared weight. Variable font files can cover a range.
+   const weights=f.weights.length>1?`${f.weights[0]} ${f.weights[f.weights.length-1]}`:String(f.weights[0]);
+   style.textContent=`@font-face{font-family:${family};src:url(${url}) format('${format}');font-style:normal;font-weight:${weights};font-display:swap}`;
+   document.head.append(style);
+  }else if(f.css&&validCSS(f.css)){
+   const l=document.createElement('link');l.rel='stylesheet';l.href=f.css;l.dataset.scrapFont=f.id;document.head.append(l);
+  }
+ }
+}
+function normalizedPlatform(v){const s=String(v||'').trim().toLowerCase();return s==='x'||s==='twitter'?'twitter':s==='instagram'?'instagram':s}
+// Each save has an update timestamp. The most recently saved applicable ancestor
+// wins, even when an older, more specific setting exists.
+// Stable ordering: newest save wins; on an equal timestamp, broader scopes win.
+const scopeTiePriority={all:5,platform:4,folder:3,keyword:2,post:1,header:6};
+function newestRule(candidates){return candidates.filter(Boolean).sort((a,b)=>(Number(b.updated)||0)-(Number(a.updated)||0)||(scopeTiePriority[b.scope]||0)-(scopeTiePriority[a.scope]||0))[0]||null}
+function nextRuleRevision(){return Math.max(Date.now(),...state.rules.map(r=>(Number(r.updated)||0)+1))}
+function pickRule(type,target){return state.rules.filter(r=>r.scope===type&&String(r.target)===String(target)).sort((a,b)=>b.updated-a.updated)[0]||null}
+function folderChain(folderId,byFolder){const chain=[],visited=new Set();let id=String(folderId||'');while(id&&byFolder.has(id)&&!visited.has(id)){visited.add(id);const folder=byFolder.get(id);chain.push(folder);id=String(folder.parentId||folder.parentFolderId||folder.parent_id||'')}return chain}
+function branchRules(platform,folderId,byFolder){const chain=folderChain(folderId,byFolder);const actualPlatform=normalizedPlatform(platform||chain.find(f=>normalizedPlatform(f.platform))?.platform);return [pickRule('all','*'),actualPlatform&&pickRule('platform',actualPlatform),...chain.map(f=>pickRule('folder',f.id))]}
+function matchingKeywords(p){const keys=Array.isArray(p.keywords)?p.keywords:[];return state.rules.filter(r=>r.scope==='keyword'&&keys.some(k=>String(k).trim().toLocaleLowerCase()===String(r.target).trim().toLocaleLowerCase()))}
+function ruleFor(p,byFolder){return newestRule([...branchRules(p.platform,p.folderId,byFolder),...matchingKeywords(p),pickRule('post',p.id)])}
+const FONT_CHILDREN='h1,h2,h3,h4,h5,h6,p,span,strong,small,div,a,button,input,textarea,select,label,li,article,section';
+function clearFont(el){if(!el)return;for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){n.style.removeProperty('font-family');n.style.removeProperty('font-weight')}}
+function setFont(el,r){if(!el||!r)return;const f=font(r.fontId),family=JSON.stringify(f.family)+',system-ui,sans-serif';const weight=String(f.weights.includes(Number(r.weight))?r.weight:(f.weights[0]||400));for(const n of [el,...el.querySelectorAll(FONT_CHILDREN)]){n.style.setProperty('font-family',family,'important');n.style.setProperty('font-weight',weight,'important')}}
+function apply(){
+ const posts=window.scrapFontData?.()||window.scrapFontPosts?.()||[];
+ const byId=new Map(posts.map(p=>[String(p.id),p]));
+ const folders=window.scrapFontFolders?.()||[];
+ const byFolder=new Map(folders.map(f=>[String(f.id),f]));
+ const route=window.scrapFontRoute?.()||{};
+ const routeRule=newestRule(branchRules(route.platform,route.folder,byFolder));
+ const root=document.documentElement,body=document.body,view=document.getElementById('view'),app=document.querySelector('main.app');
+ for(const el of [root,body]){el.style.removeProperty('font-family');el.style.removeProperty('font-weight')}
+ if(app)clearFont(app);else if(view)clearFont(view);
+ const crumb=document.getElementById('crumb');if(crumb)clearFont(crumb);
+ // The page itself inherits the selected platform or folder font.
+ const pageRule=routeRule||pickRule('all','*');
+ if(pageRule){setFont(root,pageRule);setFont(body,pageRule);if(app)setFont(app,pageRule);else if(view)setFont(view,pageRule);if(crumb)setFont(crumb,pageRule)}
+ // Home: each platform card uses its own branch. Platform: each folder card
+ // uses its own branch. A newer ancestor overrides older descendants.
+ if(view)for(const el of view.querySelectorAll('[data-platform],[data-folder]')){
+  const folderId=el.dataset.folder;
+  const folder=folderId?byFolder.get(String(folderId)):null;
+  const r=newestRule(branchRules(el.dataset.platform||folder?.platform||route.platform,folderId||route.folder,byFolder));
+  if(r)setFont(el,r);
+ }
+ // Individual scrap cards are re-applied after page-level styling, so they
+ // inherit the latest applicable platform/folder rule unless overridden later.
+ for(const el of document.querySelectorAll('#view [data-font-post]')){
+  const p=byId.get(String(el.dataset.fontPost));
+  if(p){const r=ruleFor(p,byFolder);if(r)setFont(el,r)}
+ }
+ // A header-only rule affects the three archive identity lines, never the action buttons.
+ // Reapply after page-level rules so a saved header choice takes precedence.
+ const headerRule=pickRule('header','*');
+ if(headerRule){
+  for(const id of ['archiveEyebrow','archiveTitle','archivePeriod'])setFont(document.getElementById(id),headerRule);
+ }
+}
+function rerender(){installFonts();apply()}
+async function reloadCloud(){if(window.SCRAP_GUEST_MODE)return;
+ if(!window.scrapSync?.active){if(activeUser){activeUser=null;recoveryPending=false;state=loadLocal();rerender();refreshFontLists()}return}
+ if(!window.scrapSync.fontGet||fetching)return;
+ fetching=true;
+ try{
+  const user=await window.scrapSync.fontUser();if(!user)return;
+  if(activeUser!==user){activeUser=user;lastCloudSignature=null;lastCloudUser=user;recoveryPending=false}
+  const remote=await window.scrapSync.fontGet();
+  const parsed=remote?sanitize(remote):structuredClone(defaults);
+  const signature=JSON.stringify(parsed);
+  if(signature===lastCloudSignature)return;
+  lastCloudSignature=signature;
+  if(hasCustom(parsed)){
+   snapshot(parsed);state=parsed;recoveryPending=false;
+  }else{
+   const local=loadLocal();
+   const candidates=recoveryCandidates();
+   if(hasCustom(local)||candidates.length){
+    // Never overwrite a valid local copy merely because cloud returned an empty record.
+    const best=hasCustom(local)?local:candidates[0].data;
+    state=best;recoveryPending=true;
+   }else{state=parsed;recoveryPending=false}
+  }
+  rerender();refreshFontLists();
+ }catch(e){console.warn('Font cloud sync:',e.message)}finally{fetching=false}
+}
+function refreshFontLists(){if(dialogOpen&&document.getElementById('fontEditAccordion')){drawCustom();initFontEdit();drawDeleteList();drawRecovery()}}
+
+async function save(){
+ // Guest-only in-memory changes: no localStorage, IndexedDB or cloud writes.
+ rerender();apply();return true;
+}
+function chooseFontHTML(prefix){return `<div class="field"><label>폰트 분류</label><details class="font-category-accordion" id="${prefix}CategoryAccordion"><summary id="${prefix}CategoryLabel">폰트 분류 선택</summary><div id="${prefix}CategoryOptions"></div></details></div><div class="field"><label>선택 폰트</label><details class="font-category-accordion" id="${prefix}FontAccordion"><summary id="${prefix}FontLabel">폰트 선택</summary><div id="${prefix}FontOptions"></div></details><select id="${prefix}Font" hidden>${state.fonts.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}</select></div><div class="field"><label>굵기</label><select id="${prefix}Weight"></select></div>`}
+function updateWeight(prefix){const f=font(document.getElementById(prefix+'Font')?.value);const el=document.getElementById(prefix+'Weight');if(el)el.innerHTML=f.weights.map(w=>`<option value="${w}">${w}${w===400?' · Regular':w===700?' · Bold':''}</option>`).join('')}
+function initCategoryChooser(prefix){
+ const fontSelect=document.getElementById(prefix+'Font');
+ const catBox=document.getElementById(prefix+'CategoryOptions');
+ const fontBox=document.getElementById(prefix+'FontOptions');
+ const catAccordion=document.getElementById(prefix+'CategoryAccordion');
+ const fontAccordion=document.getElementById(prefix+'FontAccordion');
+ let category=categoryOf(font(fontSelect.value));
+ function drawFonts(){
+  const list=state.fonts.filter(f=>categoryOf(f)===category);
+  fontBox.innerHTML=list.map(f=>`<button type="button" class="btn font-category-option" data-font-id="${esc(f.id)}" aria-pressed="${f.id===fontSelect.value}">${esc(f.name)}</button>`).join('')||'<p class="hint">이 분류에 등록된 폰트가 없습니다.</p>';
+  fontBox.querySelectorAll('[data-font-id]').forEach(b=>b.onclick=()=>{
+   fontSelect.value=b.dataset.fontId;
+   document.getElementById(prefix+'FontLabel').textContent=font(fontSelect.value).name;
+   fontAccordion.open=false;updateWeight(prefix);drawFonts();
+  });
+ }
+ catBox.innerHTML=FONT_CATEGORIES.map(c=>`<button type="button" class="btn font-category-option" data-category="${esc(c)}">${esc(c)} (${state.fonts.filter(f=>categoryOf(f)===c).length})</button>`).join('');
+ catBox.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{
+  category=b.dataset.category;
+  document.getElementById(prefix+'CategoryLabel').textContent=category;
+  catAccordion.open=false;
+  const first=state.fonts.find(f=>categoryOf(f)===category);
+  fontSelect.value=first?first.id:'';
+  document.getElementById(prefix+'FontLabel').textContent=first?first.name:'등록된 폰트 없음';
+  updateWeight(prefix);drawFonts();
+ });
+ document.getElementById(prefix+'CategoryLabel').textContent=category;
+ document.getElementById(prefix+'FontLabel').textContent=font(fontSelect.value).name;
+ drawFonts();
+}
+function renderFolderOptions(){const folders=window.scrapFontFolders?.()||[];return folders.map(f=>`<option value="${esc(f.id)}">${esc(f.platform==='instagram'?'Instagram':'X')} / ${esc(f.name)}</option>`).join('')}
+function open(){dialogOpen=true;selected.clear();const root=document.getElementById('modalRoot');if(!root)return;root.innerHTML=`<div class="overlay" id="overlay"><div class="dialog font-dialog" role="dialog" aria-modal="true" aria-label="폰트 설정"><div class="font-head"><h2>Font Settings</h2><button type="button" class="btn" data-close>닫기 ×</button></div><section class="font-section"><h3>1 · 범위별 폰트 설정</h3><div class="font-radio"><label><input type="radio" name="fontScope" value="all" checked> 전체 페이지</label><label><input type="radio" name="fontScope" value="header"> 헤더</label><label><input type="radio" name="fontScope" value="platform"> 플랫폼</label><label><input type="radio" name="fontScope" value="folder"> 폴더</label><label><input type="radio" name="fontScope" value="keyword"> 키워드</label></div><div id="fontScopeExtra"></div><p class="hint" id="fontScopeInfo">선택 범위: 전체 페이지</p>${chooseFontHTML('range')}<div class="font-save"><button class="btn primary" id="fontRangeSave">설정 저장</button></div></section><hr><section class="font-section"><h3>2 · 개별 스크랩 설정</h3><div class="field"><label>스크랩 검색 (제목·키워드)</label><input id="fontPostSearch" type="search" placeholder="검색어 입력"></div>${chooseFontHTML('post')}<div class="font-result-head"><span id="fontSelectionCount">0개 선택</span><button type="button" class="btn" id="fontSelectVisible">검색 결과 전체 선택</button></div><div id="fontPostResults" class="font-post-results"></div><div class="font-save"><button class="btn primary" id="fontPostSave">선택 스크랩 저장</button></div></section><hr><section class="font-section"><h3>3 · GitHub 폰트 파일 등록</h3><div class="font-radio" id="fontRegisterMode"><label><input type="radio" name="fontRegMode" value="single" checked> 단일 폰트 등록</label><label><input type="radio" name="fontRegMode" value="multi"> 다중 폰트 등록</label></div><p class="hint">먼저 GitHub 저장소의 fonts 폴더에 WOFF2 등의 폰트 파일을 업로드하세요. 업로드 후 파일 경로를 아래에 등록합니다. 폰트 재배포·웹 사용 라이선스를 확인하세요. 기존에 등록된 폰트 설정은 유지됩니다.</p><div class="field"><label>폰트 분류</label><select id="fontCustomCategory">${categoryOptions("고딕")}</select></div><div class="field"><label>표시 이름</label><input id="fontCustomName" maxlength="80" placeholder="예: 내 웹폰트"></div><div class="field"><label>폰트 식별 이름 (영문 권장)</label><input id="fontCustomFamily" maxlength="100" placeholder="예: My Font"></div><div id="fontSingleFields"><div class="field"><label>GitHub 폰트 파일 경로</label><input id="fontCustomPath" type="text" maxlength="200" placeholder="fonts/GriunXHangeul_Banguri-Rg.ttf"><div class="hint">예: fonts/GriunXHangeul_Banguri-Rg.ttf (GitHub 주소 전체 입력 불필요)</div></div><div class="field"><label>파일에서 지원하는 굵기 (쉼표 구분)</label><input id="fontCustomWeights" value="400" placeholder="예: 400 또는 400,700"></div></div><div id="fontMultiFields" hidden><details id="fontMultiCountDetails" class="font-count-accordion"><summary>등록할 폰트 수량 선택 · <span id="fontMultiCountLabel">2개</span></summary><div class="font-count-options" id="fontMultiCountOptions"></div></details><div id="fontMultiRows"></div><p class="hint">각 굵기에 해당하는 실제 폰트 파일 경로를 입력해 주세요. 최소 2개, 최대 9개입니다.</p></div><div class="font-save"><button class="btn primary" id="fontCustomSave">GitHub 폰트 등록</button></div><div id="fontCustomList" class="hint"></div><div id="fontRecoveryArea" class="font-recovery-area"></div><div class="font-recovery-area"><strong>GitHub 폰트 목록 복원</strong><div id="fontGithubRestore"></div></div></section><hr><section class="font-section"><h3>4 · 폰트 정보 수정</h3><p class="hint">등록한 사용자 폰트의 정보를 수정하면 실제 폰트 선택 목록과 화면 적용에 반영됩니다.</p><div class="field"><label>수정할 폰트 선택</label><details id="fontEditAccordion" class="font-count-accordion"><summary id="fontEditAccordionLabel">수정할 폰트를 선택하세요</summary><div id="fontEditAccordionOptions" class="font-edit-options"></div></details><select id="fontEditSelect" aria-label="수정할 폰트 선택" hidden><option value="">수정할 폰트를 선택하세요</option></select></div><div id="fontEditFields" hidden><div class="field"><label>폰트 분류</label><select id="fontEditCategory">${categoryOptions("고딕")}</select></div><div class="field"><label>표시 이름</label><input id="fontEditName" maxlength="80"></div><div class="field"><label>폰트 식별 이름</label><input id="fontEditFamily" maxlength="100"></div><div id="fontEditFileFields"></div><div class="font-save"><button type="button" class="btn primary" id="fontEditSave">변경 사항 저장 및 적용</button></div><p id="fontEditStatus" class="hint" role="status" aria-live="polite"></p></div></section><hr><section class="font-section"><h3>5 · 등록된 폰트 삭제</h3><p class="hint">직접 등록한 폰트만 삭제할 수 있습니다. 해당 폰트를 사용하는 설정도 함께 해제되며, GitHub에 업로드된 실제 폰트 파일은 삭제되지 않습니다.</p><div id="fontDeleteList" class="font-delete-list"></div></section></div></div>`;
+// Display the existing five settings sections as tabs without rebuilding their forms.
+const dialog=root.querySelector('.font-dialog');
+const sections=Array.from(dialog.querySelectorAll(':scope > .font-section'));
+const tabNames=['1 · 범위별 폰트 설정','2 · 개별 스크랩 설정','3 · GitHub 폰트 파일 등록','4 · 폰트 정보 수정','5 · 등록된 폰트 삭제'];
+const tabBar=document.createElement('nav');
+tabBar.className='font-section-tabs';
+tabBar.setAttribute('aria-label','폰트 관리 메뉴');
+const tabRows=[document.createElement('div'),document.createElement('div')];
+tabRows.forEach(row=>{row.className='font-section-tab-row';tabBar.append(row)});
+const tabButtons=sections.map((section,i)=>{
+ section.id='font-tab-panel-'+(i+1);
+ section.setAttribute('role','tabpanel');
+ section.setAttribute('aria-labelledby','font-tab-button-'+(i+1));
+ const button=document.createElement('button');
+ button.type='button';button.className='btn font-section-tab';
+ button.id='font-tab-button-'+(i+1);button.textContent=tabNames[i];
+ button.setAttribute('role','tab');
+ button.setAttribute('aria-controls',section.id);
+ button.addEventListener('click',()=>showFontSection(i));
+ tabRows[i<3?0:1].append(button);return button;
+});
+tabBar.setAttribute('role','tablist');
+dialog.querySelector('.font-head').after(tabBar);
+// Existing separators are no longer needed in a one-panel layout.
+dialog.querySelectorAll(':scope > hr').forEach(hr=>hr.hidden=true);
+function showFontSection(index){
+ sections.forEach((section,i)=>{section.hidden=i!==index;tabButtons[i].setAttribute('aria-selected',String(i===index));tabButtons[i].tabIndex=i===index?0:-1;});
+}
+tabBar.addEventListener('keydown',event=>{
+ if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+ event.preventDefault();const current=tabButtons.indexOf(document.activeElement);
+ const next=event.key==='Home'?0:event.key==='End'?tabButtons.length-1:event.key==='ArrowRight'?(current+1+tabButtons.length)%tabButtons.length:(current-1+tabButtons.length)%tabButtons.length;
+ showFontSection(next);tabButtons[next].focus();
+});
+showFontSection(0);
+if(window.SCRAP_GUEST_MODE){
+  tabButtons.slice(2).forEach(b=>b.hidden=true);
+  tabRows[1].hidden=true;
+  sections.slice(2).forEach(s=>s.hidden=true);
+  const notice=document.createElement('p');notice.className='hint';notice.textContent='게스트 체험: 변경 사항은 현재 화면에서만 적용되며 저장되지 않습니다.';
+  dialog.querySelector('.font-head').after(notice);
+  const a=document.getElementById('fontRangeSave'),b=document.getElementById('fontPostSave');
+  if(a)a.textContent='임시 적용';if(b)b.textContent='선택 스크랩에 임시 적용';
+}
+for(const pre of ['range','post']){updateWeight(pre);initCategoryChooser(pre)}
+root.querySelectorAll('[name=fontScope]').forEach(r=>r.onchange=()=>{scope=r.value;scopeUI()});scope='all';scopeUI();document.getElementById('fontPostSearch').oninput=drawPosts;document.getElementById('fontSelectVisible').onclick=()=>{for(const p of searchPosts())selected.add(p.id);drawPosts()};document.getElementById('fontRangeSave').onclick=saveRange;document.getElementById('fontPostSave').onclick=savePosts;document.getElementById('fontCustomSave').onclick=saveCustom;initMultiFields();drawPosts();drawCustom();drawDeleteList();initFontEdit();drawRecovery();showGitHubRestore()}
+function scopeUI(){const el=document.getElementById('fontScopeExtra');if(!el)return;el.innerHTML=scope==='platform'?`<div class="field"><label>플랫폼 선택</label><select id="fontPlatformSelect"><option value="">플랫폼을 선택하세요</option><option value="instagram">Instagram</option><option value="twitter">X</option></select></div>`:scope==='folder'?`<div class="field"><label>폴더 선택</label><select id="fontFolderSelect"><option value="">폴더를 선택하세요</option>${renderFolderOptions()}</select></div>`:scope==='keyword'?`<div class="field"><label>키워드 (정확히 일치)</label><input id="fontKeyword" maxlength="100" placeholder="키워드 입력"></div>`:'';const info=document.getElementById('fontScopeInfo');const update=()=>{info.textContent=scope==='all'?'선택 범위: 전체 페이지':scope==='header'?'선택 범위: 헤더 상단 3줄':scope==='platform'?'선택 범위: '+(document.getElementById('fontPlatformSelect')?.selectedOptions[0]?.textContent||'플랫폼 미선택'):scope==='folder'?'선택 범위: '+(document.getElementById('fontFolderSelect')?.selectedOptions[0]?.textContent||'폴더 미선택'):'선택 범위: 키워드 '+(document.getElementById('fontKeyword')?.value||'미입력')};el.querySelectorAll('select,input').forEach(x=>x.addEventListener('input',update));update()}
+function searchPosts(){const q=(document.getElementById('fontPostSearch')?.value||'').trim().toLocaleLowerCase();return q?(window.scrapFontData?.()||[]).filter(p=>[p.title,...(p.keywords||[])].join(' ').toLocaleLowerCase().includes(q)).slice(0,250):[]}
+function drawPosts(){const el=document.getElementById('fontPostResults');if(!el)return;const ps=searchPosts();const hasQuery=!!(document.getElementById('fontPostSearch')?.value||'').trim();el.style.display=hasQuery?'':'none';document.getElementById('fontSelectVisible').disabled=!hasQuery||!ps.length;el.innerHTML=ps.length?ps.map(p=>`<label class="font-post-option"><input type="checkbox" data-font-check="${esc(p.id)}" ${selected.has(p.id)?'checked':''}><span><strong>${esc(p.title)}</strong><small>${esc((window.scrapFontFolders?.()||[]).find(f=>f.id===p.folderId)?.name||'폴더 없음')} · ${esc(p.platform)}</small></span></label>`).join(''):hasQuery?'<p class="hint">검색 결과가 없습니다.</p>':'';el.querySelectorAll('[data-font-check]').forEach(c=>c.onchange=()=>{if(c.checked)selected.add(c.dataset.fontCheck);else selected.delete(c.dataset.fontCheck);document.getElementById('fontSelectionCount').textContent=selected.size+'개 선택'});document.getElementById('fontSelectionCount').textContent=selected.size+'개 선택'}
+async function saveRange(){let target='*';if(scope==='platform'){target=document.getElementById('fontPlatformSelect')?.value;if(!target)return alert('플랫폼을 선택해 주세요.')}if(scope==='folder'){target=document.getElementById('fontFolderSelect')?.value;if(!target)return alert('폴더를 선택해 주세요.')}if(scope==='keyword'){target=document.getElementById('fontKeyword')?.value.trim();if(!target)return alert('키워드를 입력해 주세요.')}const fontId=document.getElementById('rangeFont').value;if(!state.fonts.some(f=>f.id===fontId))return alert('폰트를 선택해 주세요.');const weight=Number(document.getElementById('rangeWeight').value);const before=structuredClone(state);state.rules=state.rules.filter(r=>!(r.scope===scope&&r.target===target));state.rules.push({scope,target,fontId,weight,updated:nextRuleRevision()});if(await save())alert(window.SCRAP_GUEST_MODE?'폰트가 임시 적용되었습니다. 새로고침하면 초기화됩니다.':'폰트 설정을 저장했습니다.');else state=before}
+async function savePosts(){if(!selected.size)return alert('스크랩을 선택해 주세요.');const before=structuredClone(state),fontId=document.getElementById('postFont').value,weight=Number(document.getElementById('postWeight').value),updated=nextRuleRevision();if(!state.fonts.some(f=>f.id===fontId))return alert('폰트를 선택해 주세요.');state.rules=state.rules.filter(r=>!(r.scope==='post'&&selected.has(r.target)));for(const target of selected)state.rules.push({scope:'post',target,fontId,weight,updated});if(await save())alert(window.SCRAP_GUEST_MODE?'선택한 스크랩에 폰트를 임시 적용했습니다.':selected.size+'개 스크랩의 폰트 설정을 저장했습니다.');else state=before}
+
+let fontRegMode='single',multiCount=2;
+function initMultiFields(){
+ const opts=document.getElementById('fontMultiCountOptions');
+ opts.innerHTML=Array.from({length:8},(_,i)=>`<button type="button" class="btn font-count-btn" data-count="${i+2}">${i+2}개</button>`).join('');
+ opts.querySelectorAll('[data-count]').forEach(b=>b.onclick=()=>{multiCount=Number(b.dataset.count);document.getElementById('fontMultiCountLabel').textContent=multiCount+'개';document.getElementById('fontMultiCountDetails').open=false;renderMultiRows()});
+ document.querySelectorAll('[name=fontRegMode]').forEach(r=>r.onchange=()=>{fontRegMode=r.value;document.getElementById('fontSingleFields').hidden=fontRegMode!=='single';document.getElementById('fontMultiFields').hidden=fontRegMode!=='multi'});
+ renderMultiRows();
+}
+function renderMultiRows(){
+ const el=document.getElementById('fontMultiRows');if(!el)return;
+ const old=Array.from(el.querySelectorAll('.font-multi-row')).map(row=>({path:row.querySelector('[data-multi-path]').value,weight:row.querySelector('[data-multi-weight]').value}));
+ const preset=[400,700,300,500,600,800,900,100,200];
+ el.innerHTML=Array.from({length:multiCount},(_,i)=>`<div class="font-multi-row"><strong>폰트 파일 ${i+1}</strong><div class="field"><label>GitHub 폰트 파일 경로</label><input data-multi-path type="text" maxlength="200" placeholder="fonts/MyFont/MyFont-${i+1}.ttf" value="${esc(old[i]?.path||'')}"></div><div class="field"><label>굵기</label><select data-multi-weight>${[100,200,300,400,500,600,700,800,900].map(w=>`<option value="${w}" ${w===Number(old[i]?.weight||preset[i])?'selected':''}>${w}</option>`).join('')}</select></div></div>`).join('');
+}
+async function verifyPaths(paths){for(const path of paths){try{const res=await fetch(new URL('./'+path,document.baseURI),{method:'GET',cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);if((res.headers.get('content-type')||'').includes('text/html'))throw Error('HTML 응답')}catch(e){if(!confirm('GitHub Pages에서 '+path+' 파일을 확인하지 못했습니다 ('+e.message+').\n배포 후 등록하는 것이 좋습니다. 그래도 저장하시겠습니까?'))return false}}return true}
+
+async function saveCustom(){
+ const name=document.getElementById('fontCustomName').value.trim(),family=document.getElementById('fontCustomFamily').value.trim();
+ if(!name||!family)return alert('표시 이름과 폰트 식별 이름을 입력해 주세요.');
+ if(state.fonts.some(f=>f.name.toLocaleLowerCase()===name.toLocaleLowerCase()))return alert('같은 이름의 폰트가 있습니다.');
+ if(state.fonts.some(f=>f.family===family))return alert('같은 폰트 식별 이름이 있습니다.');
+ let entry;
+ if(fontRegMode==='multi'){
+  const files=Array.from(document.querySelectorAll('.font-multi-row')).map(row=>({path:row.querySelector('[data-multi-path]').value.trim(),weight:Number(row.querySelector('[data-multi-weight]').value)}));
+  if(files.length<2||files.length>9||files.some(f=>!validFontPath(f.path)))return alert('2~9개의 유효한 GitHub 폰트 파일 경로를 입력해 주세요.');
+  if(new Set(files.map(f=>f.weight)).size!==files.length)return alert('서로 다른 굵기를 선택해 주세요.');
+  if(new Set(files.map(f=>f.path)).size!==files.length)return alert('중복된 파일 경로가 있습니다.');
+  entry={id:'custom-'+crypto.randomUUID(),name,family,files,weights:validWeights(files.map(f=>f.weight))};
+ }else{
+  const path=document.getElementById('fontCustomPath').value.trim(),weights=validWeights(document.getElementById('fontCustomWeights').value.split(',').map(x=>x.trim()));
+  if(!validFontPath(path)||!weights.length)return alert('폰트 파일 경로와 굵기를 확인해 주세요.');
+  entry={id:'custom-'+crypto.randomUUID(),name,family,path,weights};
+ }
+ if(!await verifyPaths(entry.files?entry.files.map(f=>f.path):[entry.path]))return;
+ entry.category=document.getElementById('fontCustomCategory').value;
+ const before=structuredClone(state);state.fonts.push(entry);
+ if(await save()){alert('GitHub 폰트가 등록되었습니다.');open()}else state=before;
+}
+
+const GITHUB_RESTORE_CATALOG=[{"name":"을유1945","family":"Eulyoo1945","files":[{"path":"fonts/Eulyoo1945/Eulyoo1945-Regular.otf","weight":400},{"path":"fonts/Eulyoo1945/Eulyoo1945-SemiBold.otf","weight":600}]},{"name":"그리운 한글 방우리","family":"GriunBanguri","files":[{"path":"fonts/GriunXHangeul_Banguri-Rg.ttf","weight":400}]},{"name":"Mona 10","family":"Mona10","files":[{"path":"fonts/Mona/Mona10.ttf","weight":400}]},{"name":"Mona 10×12","family":"Mona10x12","files":[{"path":"fonts/Mona/Mona10x12.ttf","weight":400}]},{"name":"Mona 12","family":"Mona12","files":[{"path":"fonts/Mona/Mona12.ttf","weight":400}]},{"name":"Paperlogy","family":"Paperlogy","files":[{"path":"fonts/Paperlogy/Paperlogy-1Thin.ttf","weight":100},{"path":"fonts/Paperlogy/Paperlogy-2ExtraLight.ttf","weight":200},{"path":"fonts/Paperlogy/Paperlogy-3Light.ttf","weight":300},{"path":"fonts/Paperlogy/Paperlogy-4Regular.ttf","weight":400},{"path":"fonts/Paperlogy/Paperlogy-5Medium.ttf","weight":500},{"path":"fonts/Paperlogy/Paperlogy-6SemiBold.ttf","weight":600},{"path":"fonts/Paperlogy/Paperlogy-7Bold.ttf","weight":700},{"path":"fonts/Paperlogy/Paperlogy-8ExtraBold.ttf","weight":800},{"path":"fonts/Paperlogy/Paperlogy-9Black.ttf","weight":900}]},{"name":"Pretendard","family":"Pretendard","files":[{"path":"fonts/Pretendard_otf/Pretendard-Thin.woff2","weight":100},{"path":"fonts/Pretendard_otf/Pretendard-ExtraLight.woff2","weight":200},{"path":"fonts/Pretendard_otf/Pretendard-Light.woff2","weight":300},{"path":"fonts/Pretendard_otf/Pretendard-Regular.woff2","weight":400},{"path":"fonts/Pretendard_otf/Pretendard-Medium.woff2","weight":500},{"path":"fonts/Pretendard_otf/Pretendard-SemiBold.woff2","weight":600},{"path":"fonts/Pretendard_otf/Pretendard-Bold.woff2","weight":700},{"path":"fonts/Pretendard_otf/Pretendard-ExtraBold.woff2","weight":800},{"path":"fonts/Pretendard_otf/Pretendard-Black.woff2","weight":900}]},{"name":"평창평화체","family":"PyeongChangPeace","files":[{"path":"fonts/PyeongChangPeace/PyeongChangPeace-Light.ttf","weight":300},{"path":"fonts/PyeongChangPeace/PyeongChangPeace-Bold.ttf","weight":700}]},{"name":"김좌진장군체","family":"GeneralKimJwajin","files":[{"path":"fonts/k7General/GeneralKimJwajin_Regular.ttf","weight":400},{"path":"fonts/k7General/GeneralKimJwajin_Bold.ttf","weight":700}]},{"name":"영남일보체","family":"YNAMNEWS","files":[{"path":"fonts/ynamnews/YNAMNEWS(M).ttf","weight":500},{"path":"fonts/ynamnews/YNAMNEWS(B).ttf","weight":700}]},{"name":"태백은하수체","family":"TaebaekMilkyway","files":[{"path":"fonts/etc/TAEBAEK milkyway.ttf","weight":400}]},{"name":"레트로산스","family":"EstablishRetrosans","files":[{"path":"fonts/etc/establish Retrosans.ttf","weight":400}]}];
+function showGitHubRestore(){
+ const host=document.getElementById('fontGithubRestore');if(!host)return;
+ const existing=customFonts();
+ const available=GITHUB_RESTORE_CATALOG.map((c,i)=>{
+  const paths=c.files.map(f=>f.path);
+  const duplicate=existing.some(f=>f.family===c.family||f.name===c.name||
+   (Array.isArray(f.files)?f.files.map(x=>x.path):[f.path]).some(p=>paths.includes(p)));
+  return {c,i,duplicate};
+ });
+ host.innerHTML='<details class="font-restore-accordion"><summary>폰트 선택</summary><div class="font-restore-list">'+
+ available.map(({c,i,duplicate})=>`<label class="font-restore-item"><input type="checkbox" data-restore="${i}" ${duplicate?'disabled':''}><span><strong>${esc(c.name)}</strong><small>${esc(c.family)} · ${c.files.map(f=>f.weight).join(', ')}${duplicate?' · 이미 등록됨':''}</small></span></label>`).join('')+
+ '</div></details><div class="font-save"><button type="button" class="btn primary" id="fontGithubRestoreSave">선택 폰트 복원 및 저장</button></div><p class="hint" id="fontGithubRestoreStatus" role="status" aria-live="polite"></p>';
+ host.querySelector('#fontGithubRestoreSave').onclick=restoreGitHubFonts;
+}
+async function restoreGitHubFonts(){
+ const host=document.getElementById('fontGithubRestore'),btn=host?.querySelector('#fontGithubRestoreSave');
+ const chosen=[...host.querySelectorAll('[data-restore]:checked')].map(el=>GITHUB_RESTORE_CATALOG[Number(el.dataset.restore)]);
+ const status=host.querySelector('#fontGithubRestoreStatus');
+ if(!chosen.length){status.textContent='복원할 폰트를 선택해 주세요.';return}
+ const count=chosen.reduce((n,c)=>n+c.files.length,0);
+ if(!confirm(`선택한 폰트 ${chosen.length}종의 파일 ${count}개를 확인하고 등록 정보를 저장하시겠습니까?\n기존 등록 폰트와 적용 규칙은 유지됩니다.`))return;
+ btn.disabled=true;status.textContent='GitHub Pages에서 폰트 파일을 확인하고 있습니다…';
+ const before=structuredClone(state);
+ try{
+  for(const c of chosen){
+   for(const f of c.files)await checkFontFile(f.path,c.family,f.weight);
+  }
+  const existingPaths=new Set(customFonts().flatMap(f=>Array.isArray(f.files)?f.files.map(x=>x.path):[f.path]));
+  let added=0;
+  for(const c of chosen){
+   if(state.fonts.some(f=>f.name===c.name||f.family===c.family)||c.files.some(f=>existingPaths.has(f.path)))continue;
+   const files=c.files;
+   const entry={id:'custom-'+crypto.randomUUID(),name:c.name,family:c.family,weights:files.map(f=>f.weight)};
+   if(files.length===1)entry.path=files[0].path;else entry.files=files;
+   state.fonts.push(entry);added++;
+   files.forEach(f=>existingPaths.add(f.path));
+  }
+  if(!added){status.textContent='새로 복원할 폰트가 없습니다.';return}
+  if(!await save())throw Error('저장되지 않았습니다. 기존 데이터는 유지됩니다.');
+  status.textContent=added+'종의 폰트를 저장했습니다.';
+  open();document.getElementById('font-tab-button-3')?.click();
+ }catch(e){state=before;rerender();status.textContent='복원 중단: '+e.message+' (저장된 기존 정보는 변경하지 않았습니다.)'}
+ finally{btn.disabled=false}
+}
+
+function customFonts(){return state.fonts.filter(f=>typeof f.id==='string'&&f.id.startsWith('custom-'))}
+function drawCustom(){const el=document.getElementById('fontCustomList');if(el)el.textContent='등록한 사용자 폰트: '+(customFonts().map(f=>f.name).join(', ')||'없음')}
+function initFontEdit(){
+ const sel=document.getElementById('fontEditSelect');if(!sel)return;
+ const previous=sel.value;
+ const fonts=customFonts();
+ sel.innerHTML='<option value="">수정할 폰트를 선택하세요</option>'+fonts.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+ const options=document.getElementById('fontEditAccordionOptions');
+ options.innerHTML=fonts.map(f=>`<button type="button" class="btn font-edit-option" data-edit-font="${esc(f.id)}">${esc(f.name)}</button>`).join('')||'<p class="hint">현재 저장소에 등록된 사용자 폰트가 없습니다. 3번에서 등록했는데도 보이지 않는다면 로그인 상태와 클라우드 동기화를 확인해 주세요.</p>';
+ options.querySelectorAll('[data-edit-font]').forEach(button=>button.onclick=()=>{sel.value=button.dataset.editFont;document.getElementById('fontEditAccordionLabel').textContent=state.fonts.find(f=>f.id===sel.value)?.name||'수정할 폰트를 선택하세요';document.getElementById('fontEditAccordion').open=false;drawFontEdit()});
+ sel.value=fonts.some(f=>f.id===previous)?previous:'';
+ document.getElementById('fontEditAccordionLabel').textContent=fonts.find(f=>f.id===sel.value)?.name||'등록된 폰트 선택';
+ sel.onchange=drawFontEdit;document.getElementById('fontEditSave').onclick=saveFontEdit;drawFontEdit();
+}
+function drawFontEdit(){
+ const id=document.getElementById('fontEditSelect')?.value;
+ const f=state.fonts.find(x=>x.id===id&&x.id.startsWith('custom-'));
+ const wrap=document.getElementById('fontEditFields');if(!wrap)return;wrap.hidden=!f;if(!f)return;
+ document.getElementById('fontEditCategory').value=categoryOf(f);
+ document.getElementById('fontEditName').value=f.name;
+ document.getElementById('fontEditFamily').value=f.family;
+ const files=Array.isArray(f.files)&&f.files.length>=2?f.files:null;
+ const field=document.getElementById('fontEditFileFields');
+ if(files){
+  field.innerHTML='<p class="hint">다중 폰트는 각 파일의 GitHub 경로와 굵기를 개별 수정합니다.</p>'+files.map((file,i)=>`<div class="font-multi-row"><strong>폰트 파일 ${i+1}</strong><div class="field"><label>GitHub 폰트 파일 경로</label><input data-edit-path maxlength="200" value="${esc(file.path)}"></div><div class="field"><label>파일에서 지원하는 굵기 (쉼표 구분)</label><input data-edit-weights value="${esc(file.weight)}" placeholder="예: 400"></div></div>`).join('');
+ }else{
+  field.innerHTML=`<div class="field"><label>GitHub 폰트 파일 경로</label><input id="fontEditPath" maxlength="200" value="${esc(f.path||'')}" placeholder="fonts/MyFont-Regular.ttf"></div><div class="field"><label>파일에서 지원하는 굵기 (쉼표 구분)</label><input id="fontEditWeights" value="${esc((f.weights||[400]).join(', '))}" placeholder="400, 700"></div>`;
+ }
+}
+function parseEditWeights(value){
+ const parts=value.split(',').map(x=>x.trim());
+ if(!parts.length||parts.some(x=>!/^\d+$/.test(x)))return null;
+ const weights=validWeights(parts.map(Number));
+ return weights.length===parts.length?weights:null;
+}
+function editStatus(message,isError=false){const el=document.getElementById('fontEditStatus');if(el){el.textContent=message;el.style.color=isError?'#b42318':''}if(isError)alert(message)}
+function pathURL(path){return new URL(path,document.baseURI)}
+async function checkFontFile(path,family,weight){
+ const url=pathURL(path);
+ if(url.origin!==location.origin)throw Error('GitHub Pages 사이트 내부 경로만 입력할 수 있습니다.');
+ const requestURL=new URL(url.href);requestURL.searchParams.set('fontcheck',String(Date.now()));
+ const response=await fetch(requestURL.href,{method:'GET',cache:'no-store'});
+ if(!response.ok)throw Error(`${path}: HTTP ${response.status} — GitHub Pages 배포 파일을 확인해 주세요.`);
+ const type=(response.headers.get('content-type')||'').toLowerCase();
+ if(type.includes('text/html'))throw Error(`${path}: 폰트 대신 HTML이 반환되었습니다.`);
+ const bytes=await response.arrayBuffer();
+ if(bytes.byteLength<4)throw Error(`${path}: 빈 파일입니다.`);
+ const b=new Uint8Array(bytes,0,4);
+ const sig=String.fromCharCode(...b);
+ if(!['wOF2','wOFF','OTTO'].includes(sig)&&!(b[0]===0&&b[1]===1&&b[2]===0&&b[3]===0))throw Error(`${path}: 올바른 웹폰트 파일이 아닙니다.`);
+ const testFamily='FontEditCheck_'+Math.random().toString(36).slice(2);
+ const face=new FontFace(testFamily,bytes,{style:'normal',weight:String(weight)});
+ try{await face.load()}catch{throw Error(`${path}: 브라우저가 폰트 파일을 읽지 못했습니다.`)}
+ return true;
+}
+async function saveFontEdit(){
+ const button=document.getElementById('fontEditSave');if(button?.disabled)return;
+ const id=document.getElementById('fontEditSelect')?.value;
+ const original=state.fonts.find(f=>f.id===id&&f.id.startsWith('custom-'));
+ if(!original)return editStatus('수정할 폰트를 선택해 주세요.',true);
+ const name=document.getElementById('fontEditName').value.trim(),family=document.getElementById('fontEditFamily').value.trim();
+ if(!name||!family||name.length>80||family.length>100)return editStatus('표시 이름과 폰트 식별 이름을 확인해 주세요.',true);
+ if(/[\x00-\x1f]/.test(family))return editStatus('폰트 식별 이름에 제어 문자를 사용할 수 없습니다.',true);
+ if(state.fonts.some(f=>f.id!==id&&f.name.toLocaleLowerCase()===name.toLocaleLowerCase()))return editStatus('이미 등록된 표시 이름입니다.',true);
+ if(state.fonts.some(f=>f.id!==id&&f.family===family))return editStatus('이미 등록된 폰트 식별 이름입니다.',true);
+ const entry={...original,name,family,category:document.getElementById('fontEditCategory').value};let filesToCheck=[];
+ if(Array.isArray(original.files)&&original.files.length>=2){
+  const rows=[...document.querySelectorAll('#fontEditFileFields .font-multi-row')];const files=[];
+  for(const row of rows){const path=row.querySelector('[data-edit-path]').value.trim(),weights=parseEditWeights(row.querySelector('[data-edit-weights]').value);
+   if(!validFontPath(path)||!weights||weights.length!==1)return editStatus('다중 폰트의 각 파일에 유효한 경로와 굵기 1개를 입력해 주세요.',true);
+   files.push({path,weight:weights[0]});}
+  if(files.length<2||files.length>9||new Set(files.map(f=>f.path)).size!==files.length||new Set(files.map(f=>f.weight)).size!==files.length)return editStatus('다중 폰트의 파일 수, 경로 및 굵기 중복을 확인해 주세요.',true);
+  entry.files=files;entry.weights=validWeights(files.map(f=>f.weight));delete entry.path;delete entry.css;
+  filesToCheck=files;
+ }else{
+  const path=document.getElementById('fontEditPath').value.trim(),weights=parseEditWeights(document.getElementById('fontEditWeights').value);
+  if(!validFontPath(path)||!weights||!weights.length)return editStatus('GitHub 폰트 경로 또는 굵기 정보를 확인해 주세요.',true);
+  entry.path=path;entry.weights=weights;delete entry.files;delete entry.css;
+  filesToCheck=[{path,weight:weights[0]}];
+ }
+ const before=structuredClone(state),oldVersion=fontVersions.get(id);
+ button.disabled=true;button.textContent='파일 확인 및 저장 중…';editStatus('GitHub Pages 파일을 확인하고 있습니다.');
+ try{
+  for(const file of filesToCheck)await checkFontFile(file.path,family,file.weight);
+  const index=state.fonts.findIndex(f=>f.id===id);state.fonts[index]=entry;
+  // Stable font ID: existing scope rules still reference the same font.
+  // Refresh weight selection when a previously selected weight is removed.
+  for(const rule of state.rules){if(rule.fontId===id&&!entry.weights.includes(Number(rule.weight)))rule.weight=entry.weights.includes(400)?400:entry.weights[0]}
+  const revision=String(Date.now());fontVersions.set(id,revision);
+  if(!await save())throw Error('저장소에 폰트 정보를 저장하지 못했습니다.');
+  // FontFace is tested before persistence; now refresh @font-face and all active views.
+  installFonts();apply();
+  open();const select=document.getElementById('fontEditSelect');if(select){select.value=id;const label=document.getElementById('fontEditAccordionLabel');if(label)label.textContent=entry.name;drawFontEdit()}
+  editStatus('변경 사항을 저장하고 실제 화면에 적용했습니다.');
+ }catch(error){state=before;if(oldVersion===undefined)fontVersions.delete(id);else fontVersions.set(id,oldVersion);rerender();editStatus('폰트 수정 실패: '+error.message,true)}
+ finally{const current=document.getElementById('fontEditSave');if(current){current.disabled=false;current.textContent='변경 사항 저장 및 적용'}}
+}
+
+function drawDeleteList(){
+ const el=document.getElementById('fontDeleteList');if(!el)return;
+ const fonts=customFonts();
+ if(!fonts.length){el.innerHTML='<p class="hint">현재 저장소에 등록된 사용자 폰트가 없습니다.</p>';return}
+ const oldFont=document.getElementById('fontDeleteFont')?.value||'';
+ const oldWeight=document.getElementById('fontDeleteWeight')?.value||'';
+ el.innerHTML=`<div class="field"><label for="fontDeleteFont">폰트명</label><select id="fontDeleteFont"><option value="">삭제할 폰트를 선택하세요</option>${fonts.map(f=>`<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}</select></div><div class="field"><label for="fontDeleteWeight">굵기</label><select id="fontDeleteWeight" disabled><option value="">먼저 폰트를 선택하세요</option></select></div><div class="font-save"><button type="button" class="btn font-delete-btn" id="fontDeleteSelected" disabled>선택된 폰트 삭제</button></div><p class="hint" id="fontDeleteStatus" role="status" aria-live="polite"></p>`;
+ const fontSel=document.getElementById('fontDeleteFont'),weightSel=document.getElementById('fontDeleteWeight'),btn=document.getElementById('fontDeleteSelected');
+ function updateWeights(){
+  const f=customFonts().find(f=>f.id===fontSel.value);
+  weightSel.innerHTML=f?'<option value="all">전체 굵기 (폰트 전체 삭제)</option>'+f.weights.map(w=>`<option value="${w}">${w}</option>`).join(''):'<option value="">먼저 폰트를 선택하세요</option>';
+  weightSel.disabled=!f;btn.disabled=!f;
+  if(f&&[...weightSel.options].some(o=>o.value===oldWeight))weightSel.value=oldWeight;
+ }
+ fontSel.onchange=updateWeights;
+ fontSel.value=fonts.some(f=>f.id===oldFont)?oldFont:'';
+ updateWeights();
+ btn.onclick=()=>deleteCustomFont(fontSel.value,weightSel.value);
+}
+async function deleteCustomFont(id,weight='all'){
+ const f=customFonts().find(x=>x.id===id);if(!f)return;
+ const selectedWeight=Number(weight);
+ const multi=Array.isArray(f.files)&&f.files.length>=2;
+ const canRemoveWeight=weight!=='all'&&multi&&f.files.some(x=>x.weight===selectedWeight);
+ const whole=weight==='all'||!canRemoveWeight;
+ const affected=state.rules.filter(r=>r.fontId===id).length;
+ const message=whole?`등록 폰트 “${f.name}” 전체를 삭제하시겠습니까?\n사용 중인 설정 ${affected}개도 해제됩니다.`:`“${f.name}”의 ${selectedWeight} 굵기 파일만 등록 목록에서 삭제하시겠습니까?\n남은 굵기는 유지됩니다.`;
+ if(!confirm(message+'\nGitHub 저장소의 실제 폰트 파일은 삭제되지 않습니다.'))return;
+ const before=structuredClone(state);
+ if(whole){state.fonts=state.fonts.filter(x=>x.id!==id);state.rules=state.rules.filter(r=>r.fontId!==id)}
+ else{
+  f.files=f.files.filter(x=>x.weight!==selectedWeight);
+  f.weights=validWeights(f.files.map(x=>x.weight));
+  if(f.files.length===1){f.path=f.files[0].path;delete f.files;}
+  for(const r of state.rules)if(r.fontId===id&&!f.weights.includes(Number(r.weight)))r.weight=f.weights.includes(400)?400:f.weights[0];
+ }
+ if(await save()){alert('선택한 폰트 정보를 삭제했습니다.');open()}else{state=before;rerender()}
+}
+function style(){const s=document.createElement('style');s.textContent=`.font-dialog{width:min(760px,100%)}.font-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.font-head h2{margin:0}.font-section{padding:15px 0}.font-section h3{font-size:16px;margin:0 0 16px}.font-radio{display:flex;gap:15px;flex-wrap:wrap;margin-bottom:14px}.font-radio label{display:flex;gap:5px;align-items:center}.font-save{display:flex;justify-content:center;margin:18px 0 4px}.font-post-results{max-height:260px;overflow:auto;border:1px solid #e3e7f0;border-radius:10px}.font-post-option{display:flex;align-items:start;gap:10px;padding:10px 12px;border-bottom:1px solid #edf0f5}.font-post-option:last-child{border:0}.font-post-option span{display:grid;gap:4px}.font-post-option small{color:#7d8596}.font-result-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.font-result-head .btn{font-size:12px}.font-count-accordion{border:1px solid #e3e7f0;border-radius:10px;padding:12px;margin-bottom:14px}.font-count-accordion summary{cursor:pointer;font-weight:600}.font-count-options{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.font-multi-row{border:1px solid #e3e7f0;border-radius:10px;padding:12px;margin:10px 0}.font-multi-row strong{display:block;margin-bottom:10px}.font-edit-options{display:grid;gap:7px;margin-top:12px}.font-edit-option{text-align:left;width:100%;justify-content:flex-start}.font-delete-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #e3e7f0;border-radius:10px;margin:8px 0}.font-delete-row>div{display:grid;gap:5px;min-width:0;overflow-wrap:anywhere}.font-delete-row small{color:#7d8596}.font-delete-btn{flex-shrink:0}.font-section-tabs{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px 0 6px;border-bottom:1px solid #e4e8f0}.font-section-tab-row{display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:center;gap:8px;max-width:100%;overflow-x:auto}.font-section-tab{box-sizing:border-box;flex:0 0 auto;width:max-content;min-height:40px;padding-left:1ch;padding-right:1ch;white-space:nowrap;text-align:center}.font-section-tab[aria-selected="true"]{background:#4b62cc;color:#fff;border-color:#4b62cc}.font-recovery-area{margin-top:14px;padding:12px;border:1px solid #e3e7f0;border-radius:10px}.font-recovery-area button{margin:5px 5px 0 0}.font-restore-accordion{border:1px solid #e3e7f0;border-radius:10px;margin-top:10px}.font-restore-accordion>summary{padding:14px;cursor:pointer;font-weight:700}.font-restore-list{padding:0 12px 10px}.font-restore-item{display:flex;gap:9px;align-items:flex-start;padding:9px 3px;border-bottom:1px solid #edf0f5}.font-restore-item span{display:grid;gap:3px}.font-restore-item small{color:#7d8596;overflow-wrap:anywhere}.font-dialog [hidden]{display:none!important}.font-dialog hr{border:0;border-top:1px solid #e4e8f0;margin:8px 0}`;document.head.append(s)}
+function init(){style();const exportBtn=document.getElementById('exportBtn');if(!exportBtn)return;const btn=document.createElement('button');btn.className='btn';btn.id='fontSettingsBtn';btn.textContent='font ver.';const importBtn=document.getElementById('importBtn');exportBtn.textContent='Backup_Export';if(importBtn)importBtn.textContent='Backup_Upload';exportBtn.parentNode.insertBefore(btn,exportBtn);if(importBtn)exportBtn.parentNode.insertBefore(importBtn,exportBtn);btn.onclick=open;window.scrapFontData=()=>window.scrapFontPosts?.()||[];
+const view=document.getElementById('view');
+if(view){let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;apply()})}).observe(view,{childList:true,subtree:true})}
+snapshot(state);rerender();setTimeout(reloadCloud,1300);
+// PUBLIC_FONT_SNAPSHOT_V1: font metadata and saved rules, loaded from approved static file.
+fetch('./guest-fonts.json',{cache:'no-store'}).then(async response=>{
+ if(response.status===404)return null;
+ if(!response.ok)throw Error('HTTP '+response.status);
+ return response.json();
+}).then(publicFonts=>{
+ if(!publicFonts)return;
+ if(!Array.isArray(publicFonts.fonts)||!Array.isArray(publicFonts.rules))throw Error('폰트 설정 형식 오류');
+ state=sanitize(publicFonts);rerender();refreshFontLists();
+}).catch(err=>console.warn('게스트 공개 폰트 설정 불러오기 실패:',err));}
+window.scrapFontApply=apply;window.scrapFontCloudRefresh=reloadCloud;document.addEventListener('DOMContentLoaded',init);
+})();
