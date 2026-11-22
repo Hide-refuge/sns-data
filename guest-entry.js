@@ -1,7 +1,7 @@
 /* Guest entry button: navigation gate only, NOT server authentication. */
 (() => {
   'use strict';
-  const GUEST_URL = './guest.html';
+  const GUEST_URL = './guest-app.html';
   const LOGIN_ID = 'guestEntryButton';
   const MODAL_ID = 'guestLoginDialog';
   const css = document.createElement('style');
