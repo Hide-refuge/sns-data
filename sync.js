@@ -5,7 +5,7 @@ const cfg=window.SCRAP_GOOGLE_CONFIG||{};
 const FILE='curated-by-hide-v1.json';
 const API='https://www.googleapis.com/drive/v3/files';
 const $=id=>document.getElementById(id);
-const msg=s=>{if($('syncStatus'))$('syncStatus').textContent=s};
+const msg=s=>{if($('syncStatus')){$('syncStatus').style.whiteSpace='pre-line';$('syncStatus').textContent=s}};
 const errorText=e=>e?.message||String(e);
 const sync={active:false};window.scrapSync=sync;
 let token='',tokenClient=null,remoteId=null,revision=null,loaded=false,busy=false;
@@ -435,7 +435,7 @@ function draw(){const root=$('syncControls');if(!root)return;
  if(!cfg.clientId){root.innerHTML='<p class="warning">Google OAuth 클라이언트 ID 설정이 없습니다.</p>';return}
  if(sync.active){root.innerHTML='<div class="actions"><button class="btn" id="syncNow">지금 동기화</button><button class="btn" id="migrateLocal">이 기기 로컬 자료 복사</button><button class="btn" id="importMigration">통합 JSON 복원</button><input type="file" id="migrationFile" accept=".json,application/json" style="display:none"><button class="btn" id="syncLogout">Google 로그아웃</button></div><p class="hint">Drive의 앱 전용 숨김 저장소에 저장합니다. 다른 기기의 수정이 있다면 작업 전 지금 동기화를 누르세요. 기존 Supabase는 삭제하지 않았습니다.</p>';
  $('syncNow').onclick=reload;$('migrateLocal').onclick=migrateLocal;$('importMigration').onclick=()=>$('migrationFile').click();$('migrationFile').onchange=importMigration;$('syncLogout').onclick=()=>{setLoggedOutHere(true);clearSessionToken();token='';sync.active=false;loaded=false;remoteId=null;revision=null;draw();syncState();msg('로그아웃 상태 · 마지막 Drive 사본 표시(있는 경우, 읽기 전용)');window.scrapRefresh?.();window.scrapFontCloudRefresh?.()};
- }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요. 최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
+ }else{root.innerHTML='<div class="actions"><button class="btn primary" id="googleLogin">Google 계정으로 로그인</button></div><p class="hint">저장용 Google 계정으로 로그인하세요.<br>최초 로그인 시 Drive 권한을 승인해야 합니다.</p>';
  $('googleLogin').onclick=()=>{
  if(!tokenClient){alert('Google 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');return}
  silentAttempt=false;
@@ -476,7 +476,7 @@ function initGIS(){
   return;
  }
  // Safari may reject background token requests. Do not open an unwanted login popup.
- msg('Google Drive 연결 준비 완료 · Google 로그인 버튼을 눌러 주세요.');
+ msg('Google Drive 연결 준비 완료\nGoogle 로그인 버튼을 눌러 주세요.');
 }
 function init(){
  if(typeof window.scrapRefresh!=='function'){setTimeout(init,100);return}
