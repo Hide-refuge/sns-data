@@ -197,6 +197,14 @@
     actions.appendChild(toggle);
 
     const setOpen = open => {
+      if (open) {
+        for (const id of ['fontSettingsBtn', 'cbhApiSettingsBtn']) {
+          const button = document.getElementById(id);
+          if (button && button.parentElement !== settings) {
+            settings.appendChild(button);
+          }
+        }
+      }
       drawer.hidden = !open;
       backdrop.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
