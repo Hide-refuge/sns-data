@@ -185,7 +185,77 @@ details > summary::before {
 .subfolder-horizontal details[open] .subfolder-collapse-state::after{content:"접기 ▴"}
 .subfolder-horizontal details[open] #folderForm{margin-top:14px}
 .subfolder-horizontal .subfolder-collapse-trigger:focus-visible{outline:2px solid #465cc7;outline-offset:4px;border-radius:4px}
-</style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="./sync-config.js"></script><script src="./sync.js?v=local-first-20261118-01"></script><script>
+</style><!-- mobile-popup-layer-fix:start -->
+<style>
+/* Mobile only: keep all existing dialogs above the management drawer. */
+@media (max-width: 650px) {
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot:has(.overlay),
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot:has(.overlay) .overlay {
+    z-index: 11020 !important;
+  }
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot:has(.overlay) {
+    position: relative;
+  }
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot .overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw;
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot .dialog {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
+  }
+}
+</style>
+<!-- mobile-popup-layer-fix:end -->
+<style>
+/* mobile-font-tabs-intrinsic-2ch-v4 */
+@media (max-width: 650px) {
+  .font-section-tabs {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    gap: 6px !important;
+  }
+  .font-section-tabs .font-section-tab-row {
+    display: grid !important;
+    grid-template-columns: max-content max-content !important;
+    justify-content: center !important;
+    align-items: center !important;
+    justify-items: center !important;
+    column-gap: 6px !important;
+    row-gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+  .font-section-tabs .font-section-tab-row:first-child .font-section-tab:nth-child(3) {
+    grid-column: 1 / -1 !important;
+    justify-self: center !important;
+  }
+  .font-section-tabs .font-section-tab-row .font-section-tab {
+    box-sizing: border-box !important;
+    flex: none !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 32px !important;
+    height: auto !important;
+    padding: 6px 2ch !important;
+    font-size: clamp(9px, 2.5vw, 13px) !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+}
+</style>
+</head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="./sync-config.js"></script><script src="./sync.js?v=local-first-20261118-01"></script><script>
 'use strict';
 let igSearchQuery='',igSearchActive=false,igAdvanced={folder:'',year:'',keyword:''},igSearchLayout='list';
 const DB_NAME='personal-scrap-hub-v1', DB_VERSION=1;let db,route={platform:null,folder:null},folders=[],posts=[];const $=id=>document.getElementById(id);const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const uid=()=>crypto.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2);const today=()=>new Date().toISOString();const formatDate=s=>s?new Date(s).toLocaleDateString('ko-KR'):'';window.scrapFontPosts=()=>posts;window.scrapFontFolders=()=>folders;window.scrapFontRoute=()=>route;const platforms={instagram:{name:'Instagram',glyph:'◎'},twitter:{name:'Twitter (X)',glyph:'𝕏'}};
@@ -430,4 +500,7 @@ async function importBackup(file){if(!file)return;try{if(file.size>80*1024*1024)
  },true);
 })();
 document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder),related=posts.filter(p=>p.folderId===f.id);if(folderChildren(f.id,f.platform).length){alert('하위 폴더가 존재합니다. 하위 폴더를 먼저 이동하거나 삭제해 주세요.');return}if(confirm(`'${f.name}' 폴더와 스크랩 ${related.length}개를 모두 삭제하시겠습니까?`)){for(const p of related)await del('posts',p.id);await del('folders',f.id);route.folder=null;await refresh()}}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){if(confirm('이 스크랩을 삭제하시겠습니까?')){await del('posts',t.dataset.delpost);await refresh()}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;await put('folders',{id:uid(),platform:route.platform,parentId:route.folder||null,name,description,...style,createdAt:today()});await refresh()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);openDB().then(d=>{db=d;window.scrapRefresh=refresh;refresh()}).catch(err=>{$('view').innerHTML=`<div class="warning">브라우저 저장소를 열지 못했습니다. 일반 브라우저에서 열거나 로컬 서버를 이용하세요. ${escapeHtml(err.message)}</div>`});
-</script><script src="./font-settings.js?v=font-category-cachifix-20261111-02"></script><script src="./image-gallery.js?v=gallery-cover-first-05"></script><script src="./folder-emoji-picker.js?v=emoji-picker-03"></script><script src="./api-settings.js?v=api-key-only-04"></script></body></html>
+</script><script src="./font-settings.js?v=font-modal-layer-fix-v1"></script><script src="./image-gallery.js?v=gallery-cover-first-05"></script><script src="./folder-emoji-picker.js?v=emoji-picker-03"></script><script src="./api-settings.js?v=api-key-only-04"></script><script src="./guest-entry.js?v=guest-login-01" defer></script>
+<script src="./guest-font-public-export.js?v=1"></script><script src="./archive-menu.js?v=menu-20261121-01"></script>
+
+</body></html>
