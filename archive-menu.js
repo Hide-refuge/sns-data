@@ -194,6 +194,30 @@
     };
     Array.from(actions.children).forEach(move);
     // Keep the hidden import file input in the document, so its original event handlers work.
+
+    // guest-header-label-v2
+    if (document.querySelector('script[src*="guest-app"]') ||
+        window.SCRAP_GUEST_MODE === true) {
+      const oldGuestLabel = actions.querySelector('span');
+      if (oldGuestLabel && oldGuestLabel.textContent.includes('GUEST')) {
+        oldGuestLabel.style.display = 'none';
+      }
+
+      const guestLabel = document.createElement('span');
+      guestLabel.textContent = 'GUEST · 읽기 전용';
+      guestLabel.style.cssText =
+        'display:inline-block;white-space:nowrap;font-size:12px;' +
+        'font-weight:700;color:#455abf;flex-shrink:0;';
+
+      actions.appendChild(guestLabel);
+      actions.style.display = 'flex';
+      actions.style.alignItems = 'center';
+      actions.style.justifyContent = 'flex-end';
+      actions.style.flexWrap = 'nowrap';
+      actions.style.gap = '12px';
+      actions.style.marginLeft = 'auto';
+    }
+
     actions.appendChild(toggle);
 
     const setOpen = open => {

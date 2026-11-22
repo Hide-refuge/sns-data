@@ -60,8 +60,19 @@
     button.id = LOGIN_ID;
     button.type = 'button';
     button.className = 'btn';
-    button.textContent = '게스트 로그인';
+    // guest-logout-v1
+    const isGuestPage =
+      window.SCRAP_GUEST_MODE === true ||
+      window.location.pathname.endsWith('/guest-app.html');
+
+    button.textContent = isGuestPage ? '로그아웃' : '게스트 로그인';
+
     button.addEventListener('click', () => {
+      if (isGuestPage) {
+        window.location.replace('./index.html');
+        return;
+      }
+
       error.textContent = '';
       form.reset();
       modal.showModal();
