@@ -204,6 +204,8 @@ document.addEventListener('DOMContentLoaded',()=>{
    actions.style.alignItems='center';
    actions.style.flexWrap='nowrap';
    actions.style.gap='3ch';
+    actions.style.justifyContent='flex-end';
+    actions.style.marginLeft='auto';
  }
  const hide=()=>{
    document.querySelectorAll('#syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave').forEach(x=>{x.hidden=true;x.style.display='none'});
