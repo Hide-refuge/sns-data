@@ -503,21 +503,19 @@
       "updatedAt": "2026-11-22T07:18:40.742Z"
     },
     {
-      "id": "ed38d9f7-db57-442b-96d9-41e2e3da296e",
+      "id": "4f0ff1a7-fea2-4c3b-816a-d267d3bc3e2b",
       "platform": "instagram",
       "folderId": "154ed8d1-96b0-44e9-b35e-2a725b971a1d",
-      "title": "test",
+      "title": "추가 테스트",
       "url": "http://www.naver.com",
       "summary": "",
       "authorName": "",
       "authorHandle": "",
-      "keywords": [
-        "test"
-      ],
+      "keywords": [],
       "priority": 1,
       "images": [],
-      "createdAt": "2026-11-22T09:44:24.638Z",
-      "updatedAt": "2026-11-22T09:44:24.638Z"
+      "createdAt": "2026-11-22T10:08:37.031Z",
+      "updatedAt": "2026-11-22T10:08:37.031Z"
     }
   ]
 }
