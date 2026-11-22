@@ -501,6 +501,23 @@
       ],
       "createdAt": "2026-11-22T07:18:40.742Z",
       "updatedAt": "2026-11-22T07:18:40.742Z"
+    },
+    {
+      "id": "ed38d9f7-db57-442b-96d9-41e2e3da296e",
+      "platform": "instagram",
+      "folderId": "154ed8d1-96b0-44e9-b35e-2a725b971a1d",
+      "title": "test",
+      "url": "http://www.naver.com",
+      "summary": "",
+      "authorName": "",
+      "authorHandle": "",
+      "keywords": [
+        "test"
+      ],
+      "priority": 1,
+      "images": [],
+      "createdAt": "2026-11-22T09:44:24.638Z",
+      "updatedAt": "2026-11-22T09:44:24.638Z"
     }
   ]
 }
