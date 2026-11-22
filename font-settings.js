@@ -237,7 +237,15 @@ const tabButtons=sections.map((section,i)=>{
  section.setAttribute('aria-labelledby','font-tab-button-'+(i+1));
  const button=document.createElement('button');
  button.type='button';button.className='btn font-section-tab';
+<<<<<<< HEAD
   button.style.setProperty('font-size','clamp(13px,2.5vw,13.5px)','important');
+=======
+ button.style.setProperty(
+  'font-size',
+  'clamp(13px, 2.5vw, 13.5px)',
+  'important'
+);
+>>>>>>> origin/feature/guest-readonly
  button.id='font-tab-button-'+(i+1);button.textContent=tabNames[i];
  button.setAttribute('role','tab');
  button.setAttribute('aria-controls',section.id);
