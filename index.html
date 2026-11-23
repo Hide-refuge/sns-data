@@ -362,17 +362,29 @@ html body .folder-reorder-tip button+button{margin:0}
  #view .platform .muted{line-height:1.45}
  #view .platform>.muted:last-child{margin-top:auto;padding-top:4px}
 }
-</style><style id="foldercount-20261123">/* 폴더 카드 숫자는 "하위 폴더 N개"·"스크랩 M개" 단위로만 줄바꿈 */.folder small .fc-n{white-space:nowrap}</style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><!-- security-20261123: 사용하지 않는 Supabase 외부 스크립트 제거 --><script src="./sync-config.js"></script><script src="./sync.js?v=cloud-linebreak-20261122-01"></script><script>
+</style><style id="foldercount-20261123">/* 폴더 카드 숫자는 "하위 폴더 N개"·"스크랩 M개" 단위로만 줄바꿈 */.folder small .fc-n{white-space:nowrap}</style><style id="foldertrash-20261123">
+/* foldertrash-20261123 */
+html body header.top .actions #openFolderDelete{display:inline-flex;align-items:center;justify-content:center;height:42px;min-height:42px;padding:0 14px;font-size:14px;line-height:1;border-radius:8px;box-sizing:border-box;white-space:nowrap}
+.trash-list{display:flex;flex-direction:column;gap:10px;max-height:55vh;overflow:auto;margin:6px 0 0}
+.trash-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #e3e7f0;border-radius:12px;padding:12px 14px;background:#fff}
+.trash-info{min-width:0}.trash-info strong{display:block;word-break:keep-all;overflow-wrap:break-word}.trash-info small{color:#8b91a1}
+.trash-actions{display:flex;gap:6px;flex:none}
+.trash-foot{justify-content:space-between;margin-top:14px}
+.trash-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1c2d52;color:#fff;padding:12px 16px;border-radius:12px;z-index:100000;font-size:14px;line-height:1.4;width:max-content;max-width:calc(100vw - 24px);box-sizing:border-box;text-align:center;box-shadow:0 8px 24px #0003}
+@media(max-width:520px){.trash-item{flex-direction:column;align-items:stretch}.trash-actions{justify-content:flex-end}}
+</style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="backupTrashBtn" type="button">휴지통</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><!-- security-20261123: 사용하지 않는 Supabase 외부 스크립트 제거 --><script src="./sync-config.js"></script><script src="./sync.js?v=cloud-linebreak-20261122-01"></script><script>
 'use strict';
 let igSearchQuery='',igSearchActive=false,igAdvanced={folder:'',year:'',keyword:''},igSearchLayout='list';
 const DB_NAME='personal-scrap-hub-v1', DB_VERSION=1;let db,route={platform:null,folder:null},folders=[],posts=[];const $=id=>document.getElementById(id);const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const uid=()=>crypto.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2);const today=()=>new Date().toISOString();const formatDate=s=>s?new Date(s).toLocaleDateString('ko-KR'):'';window.scrapFontPosts=()=>posts;window.scrapFontFolders=()=>folders;window.scrapFontRoute=()=>route;const platforms={instagram:{name:'Instagram',glyph:'◎'},twitter:{name:'Twitter (X)',glyph:'𝕏'},youtube:{name:'YouTube',glyph:'▶'},naverblog:{name:'네이버 블로그',glyph:'N'}};
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains('folders'))d.createObjectStore('folders',{keyPath:'id'});if(!d.objectStoreNames.contains('posts'))d.createObjectStore('posts',{keyPath:'id'})};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
-function transact(store,mode,action){return new Promise((resolve,reject)=>{const t=db.transaction(store,mode),req=action(t.objectStore(store));req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}const getAll=async s=>{
+function transact(store,mode,action){return new Promise((resolve,reject)=>{const t=db.transaction(store,mode),req=action(t.objectStore(store));req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}const getAllRaw=async s=>{
  // CBH_LOCAL_FIRST_V1
  if(window.scrapSync?.getAll){try{return await window.scrapSync.getAll(s)}catch(e){if(window.scrapSync.active)throw e}}
  const cached=await window.scrapSync?.offlineGetAll?.(s);
  return cached??transact(s,'readonly',o=>o.getAll());
 };
+// foldertrash-20261123: 휴지통 항목은 화면에서 제외
+const getAll=async s=>{const all=await getAllRaw(s);return Array.isArray(all)?all.filter(x=>!x?.trashedAt):all};
 const put=async(s,x)=>{
  if(window.scrapSync?.put)return window.scrapSync.put(s,x);
  if(await window.scrapSync?.hasOfflineCache?.())throw Error('마지막 Google Drive 사본은 로그아웃 상태에서 읽기 전용입니다. Google 로그인 후 저장해 주세요. 기존 로컬 자료는 보존되어 있습니다.');
@@ -410,6 +422,83 @@ function folderAncestors(id){const result=[],seen=new Set();let current=folders.
 function folderDescendants(id){const found=new Set(),pending=[id];while(pending.length){const cur=pending.pop();for(const f of folders){if(folderParent(f)===cur&&!found.has(f.id)&&f.id!==id){found.add(f.id);pending.push(f.id)}}}return found}
 /* foldercount-20261123: 아래 모든 단계 폴더의 스크랩까지 합친 수 */
 function folderPostTotal(id){const ids=folderDescendants(id);ids.add(id);return posts.filter(p=>ids.has(p.folderId)).length}
+/* foldertrash-20261123: 폴더 삭제 = 하위 폴더 선택 삭제, 삭제한 폴더·스크랩은 휴지통으로 */
+function trashToast(text){document.getElementById('trashToast')?.remove();const t=document.createElement('div');t.id='trashToast';t.className='trash-toast';t.textContent=text;document.body.appendChild(t);setTimeout(()=>t.remove(),3200)}
+async function trashItems(folderIds,postIds,label){
+ const id='trash-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),at=new Date().toISOString();
+ const fset=new Set(folderIds),pset=new Set(postIds);
+ for(const f of folders.filter(x=>fset.has(x.id)))await put('folders',{...f,trashedAt:at,trashId:id,trashLabel:label});
+ for(const p of posts.filter(x=>pset.has(x.id)))await put('posts',{...p,trashedAt:at,trashId:id,trashLabel:label});
+}
+function openFolderDeleteDialog(parentId,platform){
+ const kids=folderChildren(parentId||null,platform);
+ const title=parentId?'하위 폴더 삭제':'폴더 삭제';
+ if(!kids.length){modal(`<h2>${title}</h2><p class="hint">삭제할 하위 폴더가 없습니다.</p><div class="actions" style="justify-content:flex-end"><button class="btn" type="button" data-close>닫기</button></div>`);return}
+ modal(`<h2>${title}</h2><form id="folderDeleteForm"><div class="field"><label for="folderDeleteTarget">삭제할 폴더</label><select id="folderDeleteTarget">${kids.map(f=>`<option value="${escapeHtml(f.id)}">${escapeHtml(f.icon||'📁')} ${escapeHtml(f.name)} (하위 폴더 ${folderChildren(f.id,platform).length}개 · 스크랩 ${folderPostTotal(f.id)}개)</option>`).join('')}</select></div><p class="hint">선택한 폴더와 그 안의 모든 하위 폴더·스크랩이 휴지통으로 이동합니다. 관리 메뉴의 '휴지통'에서 복원할 수 있습니다.</p><div class="actions" style="justify-content:flex-end"><button class="btn" type="button" data-close>취소</button><button class="btn danger" type="submit">휴지통으로 이동</button></div></form>`);
+}
+document.addEventListener('submit',async e=>{
+ if(e.target.id!=='folderDeleteForm')return;
+ e.preventDefault();
+ const f=folders.find(x=>x.id===document.getElementById('folderDeleteTarget').value);if(!f)return;
+ const ids=[f.id,...folderDescendants(f.id)],idset=new Set(ids),ps=posts.filter(p=>idset.has(p.folderId)).map(p=>p.id);
+ if(!confirm(`'${f.name}' 폴더와 그 안의 하위 폴더 ${ids.length-1}개(아래 모든 단계), 스크랩 ${ps.length}개를 휴지통으로 옮기시겠습니까?`))return;
+ try{await trashItems(ids,ps,`폴더 '${f.name}'`);closeModal();await refresh();trashToast('휴지통으로 옮겼습니다 · 관리 메뉴 > 휴지통에서 복원할 수 있습니다')}
+ catch(err){alert('삭제 실패: '+err.message)}
+});
+function trashGroups(fa,pa){
+ const m=new Map();
+ for(const [kind,list] of [['folders',fa],['posts',pa]])for(const x of list){if(!x.trashedAt)continue;const k=x.trashId||('t-'+x.trashedAt);
+  if(!m.has(k))m.set(k,{id:k,label:x.trashLabel||'삭제한 항목',at:x.trashedAt,folders:[],posts:[]});m.get(k)[kind].push(x)}
+ return [...m.values()].sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+}
+async function openTrash(){
+ const [fa,pa]=await Promise.all([getAllRaw('folders'),getAllRaw('posts')]);
+ const groups=trashGroups(fa,pa);
+ const when=v=>{try{return new Date(v).toLocaleString('ko-KR',{dateStyle:'medium',timeStyle:'short'})}catch{return ''}};
+ modal(`<h2>휴지통</h2><p class="hint">삭제한 폴더·스크랩입니다. 복원하면 원래 위치로 돌아갑니다. 영구 삭제하면 되돌릴 수 없습니다.</p>${groups.length?`<div class="trash-list">${groups.map(g=>`<div class="trash-item"><div class="trash-info"><strong>${escapeHtml(g.label)}</strong><small>${escapeHtml(when(g.at))} · 폴더 ${g.folders.length}개 · 스크랩 ${g.posts.length}개</small></div><div class="trash-actions"><button type="button" class="btn" data-trash-restore="${escapeHtml(g.id)}">복원</button><button type="button" class="btn danger" data-trash-purge="${escapeHtml(g.id)}">영구 삭제</button></div></div>`).join('')}</div><div class="actions trash-foot"><button type="button" class="btn danger" data-trash-empty>휴지통 비우기</button><button type="button" class="btn" data-close>닫기</button></div>`:`<div class="empty">휴지통이 비어 있습니다.</div><div class="actions trash-foot" style="justify-content:flex-end"><button type="button" class="btn" data-close>닫기</button></div>`}`);
+}
+let trashPendingPosts=null;
+async function restoreTrash(id){
+ const [fa,pa]=await Promise.all([getAllRaw('folders'),getAllRaw('posts')]);
+ const g=trashGroups(fa,pa).find(x=>x.id===id);if(!g)return;
+ const clean=x=>{const y={...x};delete y.trashedAt;delete y.trashId;delete y.trashLabel;return y};
+ const active=new Set(fa.filter(x=>!x.trashedAt).map(x=>x.id)),batch=new Set(g.folders.map(x=>x.id));let lifted=0;
+ for(const f of g.folders){const y=clean(f);if(y.parentId&&!active.has(y.parentId)&&!batch.has(y.parentId)){y.parentId=null;lifted++}await put('folders',y)}
+ const ok=new Set([...active,...batch]),orphans=[];
+ for(const p of g.posts){const y=clean(p);if(!ok.has(y.folderId)){orphans.push(p);continue}await put('posts',y)}
+ await refresh();
+ if(orphans.length){trashPendingPosts=orphans;const platform=orphans[0].platform;
+  const opts=folderOptionHtml(platform,'',null);
+  if(!folders.some(f=>f.platform===platform)){alert('원래 폴더가 없어 스크랩을 복원할 수 없습니다. 먼저 폴더를 복원하거나 만들어 주세요.');trashPendingPosts=null;return openTrash()}
+  modal(`<h2>스크랩 복원 위치</h2><form id="trashRestoreForm"><p class="hint">원래 폴더가 없거나 휴지통에 있어, 스크랩 ${orphans.length}개를 넣을 폴더를 골라 주세요.</p><div class="field"><label for="trashRestoreTarget">복원할 폴더</label><select id="trashRestoreTarget">${opts}</select></div><div class="actions" style="justify-content:flex-end"><button class="btn" type="button" data-close>취소</button><button class="btn primary" type="submit">복원</button></div></form>`);return}
+ closeModal();trashToast(lifted?'복원했습니다 · 원래 상위 폴더가 없어 맨 위 단계로 복원했습니다':'복원했습니다');
+}
+document.addEventListener('submit',async e=>{
+ if(e.target.id!=='trashRestoreForm')return;e.preventDefault();
+ const target=document.getElementById('trashRestoreTarget').value;if(!target||!trashPendingPosts)return;
+ for(const p of trashPendingPosts){const y={...p,folderId:target};delete y.trashedAt;delete y.trashId;delete y.trashLabel;await put('posts',y)}
+ trashPendingPosts=null;closeModal();await refresh();trashToast('복원했습니다');
+});
+async function purgeTrash(id){
+ const [fa,pa]=await Promise.all([getAllRaw('folders'),getAllRaw('posts')]);
+ const groups=trashGroups(fa,pa).filter(g=>id==null||g.id===id);
+ const nf=groups.reduce((a,g)=>a+g.folders.length,0),np=groups.reduce((a,g)=>a+g.posts.length,0);
+ if(!groups.length)return;
+ if(!confirm(`폴더 ${nf}개, 스크랩 ${np}개를 영구 삭제합니다. 되돌릴 수 없습니다. 계속하시겠습니까?`))return;
+ for(const g of groups){for(const p of g.posts)await del('posts',p.id);for(const f of g.folders)await del('folders',f.id)}
+ await refresh();await openTrash();
+}
+document.addEventListener('click',async e=>{
+ const b=e.target.closest('#openFolderDelete,#backupTrashBtn,[data-trash-restore],[data-trash-purge],[data-trash-empty]');if(!b||window.SCRAP_GUEST_MODE)return;
+ e.preventDefault();
+ try{
+  if(b.id==='openFolderDelete')openFolderDeleteDialog(null,route.platform);
+  else if(b.id==='backupTrashBtn')await openTrash();
+  else if(b.dataset.trashRestore)await restoreTrash(b.dataset.trashRestore);
+  else if(b.dataset.trashPurge)await purgeTrash(b.dataset.trashPurge);
+  else if(b.hasAttribute('data-trash-empty'))await purgeTrash(null);
+ }catch(err){alert('휴지통 작업 실패: '+err.message)}
+});
 function folderOptionHtml(platform,selected,exclude){const disallowed=exclude?new Set([exclude,...folderDescendants(exclude)]):new Set();return folders.filter(f=>f.platform===platform&&!disallowed.has(f.id)).map(f=>{const chain=folderAncestors(f.id);return `<option value="${escapeHtml(f.id)}" ${selected===f.id?'selected':''}>${escapeHtml(chain.map(x=>x.name).join(' / '))}</option>`}).join('')}
 function folderCards(parentId,platform){const fs=folderChildren(parentId,platform);return fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small><span class="fc-n">하위 폴더 ${folderChildren(f.id,platform).length}개</span> · <span class="fc-n">스크랩 ${folderPostTotal(f.id)}개</span></small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">하위 폴더가 없습니다.</div>'}
 function subfolderForm(){const color='#e3e7f0',icon='📁';return `<section class="panel subfolder-horizontal"><details class="subfolder-collapse"><summary class="subfolder-collapse-trigger">＋ 하위 폴더 <span class="subfolder-collapse-state" aria-hidden="true"></span></summary><form id="folderForm"><div class="subfolder-row1"><div class="field"><label for="folderName">폴더명</label><input id="folderName" maxlength="70" required></div><div class="field"><label for="folderDesc">설명</label><input id="folderDesc"></div></div><div class="subfolder-row2"><div class="field subfolder-icon-field"><label>폴더 아이콘 (이모지 선택)</label><div class="folder-emoji-options" hidden>${FOLDER_EMOJIS.map(e=>`<button type="button" class="btn ${e===icon?'selected':''}" data-emoji="${e}" aria-label="${e} 선택">${e}</button>`).join('')}</div><input type="hidden" name="icon" value="${icon}"></div><div class="field subfolder-color-field"><label>폴더 테두리 색상 (색상표 또는 HEX 코드)</label><div class="folder-color-picker"><input type="color" data-color-picker value="${color}" aria-label="테두리 색상 선택"><input type="text" name="color" data-color-text maxlength="7" value="${color}" placeholder="#000000" aria-label="HEX 색상 코드"></div></div><div class="subfolder-action"><button class="btn primary subfolder-create" type="submit">하위 폴더 생성</button></div></div></form></details></section>`}
@@ -465,14 +554,15 @@ function closeModal(){$('modalRoot').innerHTML=''}
 // top-folder-create-modal-v1: 상위 폴더 생성을 상단 버튼 + 중앙 팝업으로 전환
 function syncFolderCreateButton(){
   const show=Boolean(route.platform&&!route.folder);
-  let btn=document.getElementById('openFolderCreate');
-  if(!show){if(btn)btn.remove();return}
+  let btn=document.getElementById('openFolderCreate'),dbtn=document.getElementById('openFolderDelete');
+  if(!show){if(btn)btn.remove();if(dbtn)dbtn.remove();return}
   const actions=document.querySelector('header.top .actions');
   if(!actions)return;
   if(!btn){btn=document.createElement('button');btn.type='button';btn.id='openFolderCreate';btn.className='btn primary';btn.textContent='+ 폴더 생성'}
+  if(!dbtn){dbtn=document.createElement('button');dbtn.type='button';dbtn.id='openFolderDelete';dbtn.className='btn danger';dbtn.textContent='폴더 삭제'}
   const toggle=document.getElementById('archiveMenuToggle');
-  if(toggle&&toggle.parentElement===actions){if(btn.nextElementSibling!==toggle)actions.insertBefore(btn,toggle)}
-  else if(btn.parentElement!==actions)actions.appendChild(btn);
+  const anchor=toggle&&toggle.parentElement===actions?toggle:null;
+  if(btn.parentElement!==actions||btn.nextElementSibling!==dbtn||dbtn.nextElementSibling!==anchor){actions.insertBefore(btn,anchor);actions.insertBefore(dbtn,anchor)}
 }
 function openFolderCreateModal(){
   if(!route.platform||route.folder)return;
@@ -519,7 +609,7 @@ async function exportBackup(){
   const label=button.textContent;
   button.disabled=true;button.textContent='백업 준비 중…';
   try{
-    const [savedFolders,savedPosts]=await Promise.all([getAll('folders'),getAll('posts')]);
+    const [savedFolders,savedPosts]=await Promise.all([getAllRaw('folders'),getAllRaw('posts')]);
     const payload={version:1,exportedAt:today(),folders:savedFolders,posts:savedPosts};
     const filename='스크랩허브_백업_'+new Date().toISOString().slice(0,10)+'.json';
     const blob=new Blob([JSON.stringify(payload)],{type:'application/json;charset=utf-8'});
@@ -759,11 +849,11 @@ function manualPostCompare(a,b){const ao=Number.isFinite(a.sortOrder)?a.sortOrde
  document.addEventListener('pointercancel',e=>{if(e.pointerType!=='touch'){if(active)void finishDrag(true);else clearPending()}},true);
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(active)void finishDrag(true);if(selected)unselect()}});
 })();
-document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder),related=posts.filter(p=>p.folderId===f.id);if(folderChildren(f.id,f.platform).length){alert('하위 폴더가 존재합니다. 하위 폴더를 먼저 이동하거나 삭제해 주세요.');return}if(confirm(`'${f.name}' 폴더와 스크랩 ${related.length}개를 모두 삭제하시겠습니까?`)){for(const p of related)await del('posts',p.id);await del('folders',f.id);route.folder=null;await refresh()}}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){if(confirm('이 스크랩을 삭제하시겠습니까?')){await del('posts',t.dataset.delpost);await refresh()}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;const inModal=Boolean(e.target.closest('#modalRoot'));await put('folders',{id:uid(),platform:route.platform,parentId:route.folder||null,name,description,...style,createdAt:today()});await refresh();if(inModal)closeModal()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);openDB().then(d=>{db=d;window.scrapRefresh=refresh;refresh()}).catch(err=>{$('view').innerHTML=`<div class="warning">브라우저 저장소를 열지 못했습니다. 일반 브라우저에서 열거나 로컬 서버를 이용하세요. ${escapeHtml(err.message)}</div>`});
+document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder);if(f)openFolderDeleteDialog(f.id,f.platform)}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){const p=posts.find(x=>x.id===t.dataset.delpost);if(p&&confirm('이 스크랩을 휴지통으로 옮기시겠습니까? 관리 메뉴의 휴지통에서 복원할 수 있습니다.')){await trashItems([],[p.id],`스크랩 '${p.title||'제목 없음'}'`);await refresh();trashToast('휴지통으로 옮겼습니다')}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;const inModal=Boolean(e.target.closest('#modalRoot'));await put('folders',{id:uid(),platform:route.platform,parentId:route.folder||null,name,description,...style,createdAt:today()});await refresh();if(inModal)closeModal()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);openDB().then(d=>{db=d;window.scrapRefresh=refresh;refresh()}).catch(err=>{$('view').innerHTML=`<div class="warning">브라우저 저장소를 열지 못했습니다. 일반 브라우저에서 열거나 로컬 서버를 이용하세요. ${escapeHtml(err.message)}</div>`});
 </script><script src="./font-settings.js?v=menu-platforms-20261123"></script><script src="./image-gallery.js?v=gallery-cover-first-05"></script><script src="./folder-emoji-picker.js?v=emoji-picker-03"></script><script src="./api-settings.js?v=menu-platforms-20261123"></script><script src="./guest-entry.js?v=guest-login-01" defer></script>
-<script src="./guest-font-public-export.js?v=1"></script><script src="./archive-menu.js?v=guestsync-20261123"></script>
+<script src="./guest-font-public-export.js?v=1"></script><script src="./archive-menu.js?v=foldertrash-20261123"></script>
 
-<script src="./guest-json-export.js?v=1"></script><script src="./github-direct-publish.js?v=1"></script>
+<script src="./guest-json-export.js?v=foldertrash-20261123"></script><script src="./github-direct-publish.js?v=foldertrash-20261123"></script>
 <!-- subfolder-modal-layout-v3 -->
 <style>
 #modalRoot .overlay {

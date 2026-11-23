@@ -31,10 +31,13 @@
           throw new Error('Google Drive 동기화 연결을 확인해 주세요.');
         }
 
-        const [folders, posts] = await Promise.all([
+        const [allFolders, allPosts] = await Promise.all([
           window.scrapSync.getAll('folders'),
           window.scrapSync.getAll('posts')
         ]);
+        // foldertrash-20261123: 휴지통 항목은 공개용 JSON에서 제외
+        const folders = Array.isArray(allFolders) ? allFolders.filter(x => !x?.trashedAt) : allFolders;
+        const posts = Array.isArray(allPosts) ? allPosts.filter(x => !x?.trashedAt) : allPosts;
 
         if (!Array.isArray(folders) || !Array.isArray(posts)) {
           throw new Error('폴더 또는 스크랩 데이터를 읽지 못했습니다.');
