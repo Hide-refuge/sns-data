@@ -386,6 +386,36 @@ html body header.top .actions #openFolderDelete{display:inline-flex;align-items:
 }
 /* 휴대폰 화면에서는 동기화 안내의 추가 줄바꿈을 쓰지 않음 */
 @media (max-width:699px),(max-height:539px){#archiveMenuDrawer br[data-wide-break]{display:none}}
+</style><style id="navkit-20261123">
+/* navkit-20261123 */
+html{scroll-padding-top:56px}
+/* 05 고정 헤더 */
+#crumb{position:sticky;top:0;z-index:5;background:rgba(246,247,251,.96);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);margin-left:-22px;margin-right:-22px;padding:12px 22px;transition:box-shadow .2s}
+#crumb.nav-stuck{box-shadow:0 6px 16px #25315a14}
+#crumb .nav-count{margin-left:auto;font-size:12px;color:#5363b2;background:#eef0fb;border-radius:30px;padding:3px 9px;white-space:nowrap}
+@media(max-width:760px){#crumb{margin-left:-13px;margin-right:-13px;padding:10px 13px}}
+/* 09 뒤로 가기 버튼 (휴대폰만) */
+#crumb .nav-back{display:none}
+/* 06 플로팅 버튼 · 01 하단 탭바 (휴대폰만) */
+.nav-fabs,.nav-tabbar{display:none}
+@media(max-width:699px){
+ html{scroll-padding-bottom:96px}
+ #crumb{flex-wrap:wrap;row-gap:4px}
+ #crumb .nav-back{display:inline-flex;align-items:center;flex:0 0 100%;border:0;background:none;color:#465cc7;font-size:15px;font-weight:600;padding:2px 0 4px;margin:0;text-align:left}
+ body.has-tabbar{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+ .nav-tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:8;background:rgba(255,255,255,.97);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-top:1px solid #e3e7f0;padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px #25315a0d}
+ .nav-tabbar button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:48px;justify-content:center;font-size:11px;color:#8b91a1;padding:2px 0}
+ .nav-tabbar button b{font-size:19px;line-height:1.1;font-weight:400}
+ .nav-tabbar button.on{color:#465cc7;font-weight:700}
+ .nav-fabs{display:flex;flex-direction:column;align-items:center;gap:12px;position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:8;pointer-events:none}
+ .nav-fab{pointer-events:auto;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;line-height:1;padding:0;box-sizing:border-box}
+ .nav-fab[hidden]{display:none}
+ .nav-fab-add{border:0;background:#465cc7;color:#fff;font-size:30px;box-shadow:0 8px 22px #465cc766}
+ .nav-fab-top{border:1px solid #dfe3ed;background:#fff;color:#465cc7;box-shadow:0 4px 12px #0001;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none}
+ .nav-fab-top.show{opacity:1;transform:none;pointer-events:auto}
+ html body .section-head .actions>#addPost:not(#_){display:none!important}
+ body.has-tabbar .folder-reorder-tip,body.has-tabbar .trash-toast{bottom:calc(84px + env(safe-area-inset-bottom))!important}
+}
 </style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="backupTrashBtn" type="button">휴지통</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><!-- security-20261123: 사용하지 않는 Supabase 외부 스크립트 제거 --><script src="./sync-config.js"></script><script src="./sync.js?v=cloud-linebreak-20261122-01"></script><script>
 'use strict';
 let igSearchQuery='',igSearchActive=false,igAdvanced={folder:'',year:'',keyword:''},igSearchLayout='list';
@@ -993,4 +1023,72 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,a,i
 </script>
 
 
+<script id="navkit-20261123-js">
+/* navkit-20261123: 뒤로 가기(브라우저 기록) · 고정 헤더 · 플로팅 버튼 · 하단 탭바 */
+(()=>{
+ const PHONE='(max-width:699px)';
+ const isPhone=()=>matchMedia(PHONE).matches;
+ const view=()=>document.getElementById('view');
+ /* ── 09 뒤로 가기: 화면 이동을 브라우저 기록에 남김 ───────────────── */
+ const orig=go;let popping=false;
+ const key=r=>(r.platform||'')+'/'+(r.folder||'');
+ const hashOf=(p,f)=>'#/'+(p?encodeURIComponent(p)+(f?'/'+encodeURIComponent(f):''):'');
+ const depth=()=>Number(history.state?.navDepth)||0;
+ go=function(platform=null,folder=null){
+  const before=key(route);orig(platform,folder);
+  if(!popping&&key(route)!==before){try{history.pushState({navkit:1,p:route.platform,f:route.folder,navDepth:depth()+1},'',hashOf(route.platform,route.folder))}catch{}}
+ };
+ window.go=go;
+ try{history.replaceState({navkit:1,p:null,f:null,navDepth:0},'',location.hash&&location.hash.startsWith('#/')?location.hash:hashOf(null,null))}catch{}
+ const parseHash=()=>{const m=/^#\/([^/]*)\/?([^/]*)$/.exec(location.hash||'');if(!m)return{p:null,f:null};return{p:decodeURIComponent(m[1])||null,f:decodeURIComponent(m[2])||null}};
+ const valid=(p,f)=>(!p||platforms[p])&&(!f||folders.some(x=>x.id===f&&x.platform===p));
+ addEventListener('popstate',e=>{
+  const st=e.state?.navkit?e.state:parseHash();
+  if(document.querySelector('#modalRoot .overlay'))closeModal();
+  const d=document.getElementById('archiveMenuDrawer');if(d&&!d.hidden)d.querySelector('.archive-menu-close')?.click();
+  popping=true;try{if(valid(st.p,st.f))orig(st.p||null,st.f||null);else orig(null,null)}finally{popping=false}
+ });
+ // 주소(#/플랫폼/폴더)로 들어오면 자료를 불러온 뒤 그 화면으로 이동
+ let deep=parseHash(),deepDone=!deep.p,deepStart=Date.now();
+ const tryDeep=()=>{if(deepDone)return;if(Date.now()-deepStart>15000){deepDone=true;return}
+  if(typeof folders==='undefined')return;
+  if(deep.f&&!folders.some(x=>x.id===deep.f))return;
+  if(!platforms[deep.p]){deepDone=true;return}
+  deepDone=true;popping=true;try{orig(deep.p,deep.f)}finally{popping=false}
+  try{history.replaceState({navkit:1,p:route.platform,f:route.folder,navDepth:0},'',hashOf(route.platform,route.folder))}catch{}
+ };
+ // 휴대폰: 경로 위 '‹ 상위' 버튼
+ const parentRoute=()=>{if(route.folder){const f=folders.find(x=>x.id===route.folder);return{p:route.platform,f:f?.parentId||null}}return{p:null,f:null}};
+ const parentName=()=>{const r=parentRoute();if(r.f)return folders.find(x=>x.id===r.f)?.name||'상위 폴더';return r.p?platforms[r.p]?.name||'플랫폼':'홈'};
+ const syncBack=()=>{const c=document.getElementById('crumb');let b=document.getElementById('navBack');
+  if(!c||!(route.platform||route.folder)){b?.remove();return}
+  if(!b){b=document.createElement('button');b.type='button';b.id='navBack';b.className='nav-back';
+   b.addEventListener('click',()=>{const r=parentRoute();if(depth()>0&&history.state?.navkit)history.back();else go(r.p,r.f)})}
+  b.textContent='‹ '+parentName();if(c.firstElementChild!==b)c.prepend(b)};
+ /* ── 05 고정 헤더: 경로 + 스크랩 수 ─────────────────────────────── */
+ const syncCount=()=>{const c=document.getElementById('crumb');if(!c)return;let s=c.querySelector('.nav-count');
+  const list=document.getElementById('postList');const n=list?list.querySelectorAll('.note').length:0;
+  if(list){if(!s){s=document.createElement('span');s.className='nav-count'}s.textContent='스크랩 '+n+'개';if(c.lastElementChild!==s)c.appendChild(s)}else s?.remove()};
+ const syncStuck=()=>{const c=document.getElementById('crumb');if(c)c.classList.toggle('nav-stuck',scrollY>8&&c.getBoundingClientRect().top<=1)};
+ /* ── 06 플로팅 버튼 (휴대폰): + 스크랩 추가 · ↑ 맨 위로, 같은 크기 ─────── */
+ const fabs=document.createElement('div');fabs.className='nav-fabs';
+ const up=document.createElement('button');up.type='button';up.id='fabTop';up.className='nav-fab nav-fab-top';up.setAttribute('aria-label','맨 위로');up.textContent='↑';
+ const add=document.createElement('button');add.type='button';add.id='fabAdd';add.className='nav-fab nav-fab-add';add.setAttribute('aria-label','스크랩 추가');add.textContent='+';
+ up.addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+ add.addEventListener('click',()=>document.getElementById('addPost')?.click());
+ fabs.append(up,add);
+ const syncFab=()=>{const canAdd=!window.SCRAP_GUEST_MODE&&!!document.getElementById('addPost');add.hidden=!canAdd;up.classList.toggle('show',scrollY>500)};
+ /* ── 01 하단 탭바 (휴대폰): 홈 + 플랫폼 ─────────────────────────── */
+ const bar=document.createElement('nav');bar.className='nav-tabbar';bar.setAttribute('aria-label','플랫폼 이동');
+ bar.innerHTML=[['','⌂','홈'],...Object.entries(platforms).map(([k,v])=>[k,v.glyph,k==='naverblog'?'블로그':k==='twitter'?'X':v.name])]
+  .map(([k,g,n])=>`<button type="button" data-navtab="${k}"><b aria-hidden="true">${g}</b><span>${n}</span></button>`).join('');
+ bar.addEventListener('click',e=>{const b=e.target.closest('[data-navtab]');if(!b)return;const k=b.dataset.navtab||null;if(k===route.platform&&!route.folder){scrollTo({top:0,behavior:'smooth'});return}go(k,null)});
+ const syncBar=()=>{bar.querySelectorAll('[data-navtab]').forEach(b=>{const on=(b.dataset.navtab||null)===(route.platform||null);b.classList.toggle('on',on);b.setAttribute('aria-current',on?'page':'false')});
+  document.body.classList.toggle('has-tabbar',isPhone())};
+ const all=()=>{tryDeep();syncBack();syncCount();syncStuck();syncFab();syncBar()};
+ const start=()=>{document.body.append(fabs,bar);const v=view();if(v)new MutationObserver(all).observe(v,{childList:true,subtree:true});
+  addEventListener('scroll',()=>{syncStuck();syncFab()},{passive:true});matchMedia(PHONE).addEventListener?.('change',all);all()};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
 </body></html>
