@@ -11,7 +11,7 @@
     css.textContent = `
       .archive-menu-toggle{display:inline-flex;align-items:center;justify-content:center;width:42px;height:40px;cursor:pointer;border:1px solid #dce1eb;border-radius:10px;background:#fff;color:#303b55;font-size:22px;line-height:1}
       .archive-menu-toggle:focus-visible,.archive-menu-close:focus-visible{outline:3px solid #5574d0;outline-offset:2px}
-      .archive-menu-backdrop[hidden],.archive-menu-drawer[hidden]{display:none!important}
+      .archive-menu-backdrop[hidden],.archive-menu-drawer[hidden]{display:none!important}.archive-menu-drawer.archive-menu-inactive{opacity:.55;pointer-events:none;filter:grayscale(.3);transition:opacity .15s}@media(max-width:650px){html body.archive-menu-open .cbh-api-overlay{right:0!important;z-index:11020!important}html body.archive-menu-open .cbh-api-panel{max-width:calc(100vw - 28px)!important}}
       .archive-menu-backdrop{position:fixed;inset:0;background:rgba(17,24,39,.32);z-index:10000}
       .archive-menu-drawer{position:fixed;top:0;right:0;height:100dvh;width:min(410px,92vw);background:#fff;box-shadow:-8px 0 30px rgba(0,0,0,.14);z-index:10001;overflow:auto;padding:20px;box-sizing:border-box;color:#253044}
       /* ARCHIVE_LEFT_PANE_MODAL_CENTER_V1 */
@@ -242,15 +242,22 @@
     backdrop.addEventListener('click', () => setOpen(false));
     drawer.querySelector('.archive-menu-close').addEventListener('click', () => setOpen(false));
 
-    // Close the mobile menu before opening Font Settings.
-    drawer.addEventListener('click', event => {
-      if (event.target.closest('#fontSettingsBtn')) {
-        setOpen(false);
-      }
-    }, true);
+    // menu-platforms-20261123: 설정 팝업이 열려 있는 동안 메뉴는 닫지 않고 비활성화만 함
+    const popupOpen = () => Boolean(document.querySelector('#modalRoot .overlay') || document.getElementById('cbhApiOverlay'));
+    const syncInactive = () => {
+      const inactive = !drawer.hidden && popupOpen();
+      drawer.classList.toggle('archive-menu-inactive', inactive);
+      if (inactive) drawer.setAttribute('inert', '');
+      else drawer.removeAttribute('inert');
+    };
+    new MutationObserver(syncInactive).observe(document.body, {childList: true});
+    const modalRoot = document.getElementById('modalRoot');
+    if (modalRoot) new MutationObserver(syncInactive).observe(modalRoot, {childList: true});
+    new MutationObserver(syncInactive).observe(drawer, {attributes: true, attributeFilter: ['hidden']});
+    // Esc: 팝업이 열려 있으면 팝업만 닫히고 메뉴는 유지 (팝업 처리보다 먼저 상태 확인)
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && !drawer.hidden) setOpen(false);
-    });
+      if (event.key === 'Escape' && !drawer.hidden && !popupOpen()) setOpen(false);
+    }, true);
     // Dynamically added header buttons (e.g. font or API settings) are moved as well.
     const observer = new MutationObserver(records => {
       records.forEach(record => record.addedNodes.forEach(node => {
