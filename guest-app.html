@@ -297,7 +297,51 @@ header.top .actions #openFolderCreate{display:inline-flex;align-items:center;jus
   header.top .actions #archiveMenuToggle{margin-left:auto}
 }
 </style>
-<!-- guestsync-20261123: 이 파일은 index.html에서 자동 생성됩니다 (guestsync.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
+<style id="mobilefit-20261123">
+/* mobilefit-20261123: 모바일 검수 반영 */
+/* 스크랩 버튼(긴 @계정·작성자 이름)이 카드 밖으로 넘치지 않게 */
+.note>*{min-width:0}
+.note-actions{min-width:0;max-width:100%}
+.note-actions>a,.note-actions>button{max-width:100%;overflow-wrap:anywhere;white-space:normal;text-align:left}
+/* 손가락 화면: 입력칸 글자 16px (iPhone이 누를 때 화면을 확대하지 않음), 메뉴 버튼 누르기 쉽게 */
+@media (pointer:coarse){
+ html body input:not(#_):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]),html body select:not(#_),html body textarea:not(#_),
+ html body .cbh-api-panel :is(#cbhApiProvider,#cbhApiKey,#cbhApiPrompt){font-size:16px!important}
+ html body .archive-menu-drawer button:not(#_),html body #archiveMenuDrawer #syncControls button:not(#_){min-height:40px!important}
+ .crumb button{padding:10px 6px;margin:-10px -6px}
+}
+/* 손가락 화면: 마우스용 설명(말풍선·안내 문구) 숨김 */
+@media (hover:none){.folder:hover .tooltip,.folder:focus-visible .tooltip{display:none!important}.hover-only-hint{display:none}}
+/* 관리 메뉴는 항상 위에서부터 */
+html body .archive-menu-drawer{justify-content:flex-start!important}
+/* 폰트 설정 탭: 좁으면 줄바꿈, 글씨 크기 통일 */
+html body .font-dialog .font-section-tab-row:not(#_){flex-wrap:wrap!important;max-width:100%}
+html body .font-dialog .font-section-tab:not(#_){max-width:100%!important;white-space:normal!important}
+@media(max-width:650px){html body .font-dialog .font-section-tabs .font-section-tab-row:not(#_){grid-template-columns:repeat(2,minmax(0,max-content))!important}}
+html body .font-dialog .font-section-tab:not(#_){font-size:13px!important}
+/* 하위 폴더 생성 창: 좁은 화면은 한 줄에 하나씩 */
+@media(max-width:600px){
+ html body .subfolder-horizontal .subfolder-row2{grid-template-columns:minmax(0,1fr)!important;overflow:visible!important}
+ html body .subfolder-horizontal .subfolder-row2>.field{min-width:0!important}
+ html body .subfolder-horizontal .subfolder-create{width:100%!important}
+}
+/* 가로로 든 휴대폰: 설정 팝업을 메뉴 위 전체 폭으로 */
+@media (max-height:520px) and (max-width:1000px){
+ html body.archive-menu-open #modalRoot .overlay,html body.archive-menu-open .cbh-api-overlay{right:0!important;z-index:11020!important}
+}
+/* 휴대폰 배치 */
+@media(max-width:760px){
+ html body #archiveEyebrow{font-size:clamp(13px,4.2vw,26px);letter-spacing:.08em}
+ #view .grid:has(>.platform){grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ #view .platform{min-height:132px;padding:16px}
+ #view .platform strong{font-size:18px}
+ #view .platform .glyph{font-size:26px}
+ #view .folders{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #view .folders .folder{min-height:112px;padding:13px}
+ #view .folders .folder .foldericon{font-size:26px}
+ #view .folders .folder strong{font-size:15px;margin:8px 0 3px}
+}
+</style><!-- mobilefit-20261123: 이 파일은 index.html에서 자동 생성됩니다 (mobilefit.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
 <style id="guest-readonly-style">
 #syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#cbhApiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,.subfolder-create,#openFolderCreate,#openSubfolderModal,.item-move-hint,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave {display:none!important}
 /* 기본 화면의 버튼 통합 스타일(display:inline-flex!important)보다 우선하도록 더 구체적인 선택자로 한 번 더 숨김 */
@@ -307,6 +351,11 @@ html body header.top .actions #openFolderCreate {display:none!important}
 /* 게스트: 끌어서 옮기기 기능이 없으므로 카드 위에서도 화면 스크롤·글자 선택 가능 */
 .folders .folder{touch-action:auto!important}
 #postList .note{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}
+/* 게스트 메뉴: 쓰지 않는 '백업 관리'·동기화 안내 숨김, 로그아웃 버튼만 표시 */
+.archive-menu-group:has(#archiveMenuBackup){display:none!important}
+html body .archive-menu-drawer #syncPanel>:not(#syncControls){display:none!important}
+html body .archive-menu-drawer #syncPanel{margin:0!important}
+#archiveMenuCloud::before{content:'게스트 모드';display:block;font-size:14px;font-weight:700;margin:0 0 12px;text-align:center}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
@@ -373,7 +422,7 @@ function folderOptionHtml(platform,selected,exclude){const disallowed=exclude?ne
 function folderCards(parentId,platform){const fs=folderChildren(parentId,platform);return fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>하위 폴더 ${folderChildren(f.id,platform).length}개 · 스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">하위 폴더가 없습니다.</div>'}
 function subfolderForm(){const color='#e3e7f0',icon='📁';return `<section class="panel subfolder-horizontal"><details class="subfolder-collapse"><summary class="subfolder-collapse-trigger">＋ 하위 폴더 <span class="subfolder-collapse-state" aria-hidden="true"></span></summary><form id="folderForm"><div class="subfolder-row1"><div class="field"><label for="folderName">폴더명</label><input id="folderName" maxlength="70" required></div><div class="field"><label for="folderDesc">설명</label><input id="folderDesc"></div></div><div class="subfolder-row2"><div class="field subfolder-icon-field"><label>폴더 아이콘 (이모지 선택)</label><div class="folder-emoji-options" hidden>${FOLDER_EMOJIS.map(e=>`<button type="button" class="btn ${e===icon?'selected':''}" data-emoji="${e}" aria-label="${e} 선택">${e}</button>`).join('')}</div><input type="hidden" name="icon" value="${icon}"></div><div class="field subfolder-color-field"><label>폴더 테두리 색상 (색상표 또는 HEX 코드)</label><div class="folder-color-picker"><input type="color" data-color-picker value="${color}" aria-label="테두리 색상 선택"><input type="text" name="color" data-color-text maxlength="7" value="${color}" placeholder="#000000" aria-label="HEX 색상 코드"></div></div><div class="subfolder-action"><button class="btn primary subfolder-create" type="submit">하위 폴더 생성</button></div></div></form></details></section>`}
 
-function render(){queueMicrotask(()=>window.scrapFontApply?.());queueMicrotask(syncFolderCreateButton);const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3>폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="folder-list-wrap">${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 상단의 + 폴더 생성 버튼으로 만들어 보세요.</div>'}</div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
+function render(){queueMicrotask(()=>window.scrapFontApply?.());queueMicrotask(syncFolderCreateButton);const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3 class="hover-only-hint">폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="folder-list-wrap">${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 상단의 + 폴더 생성 버튼으로 만들어 보세요.</div>'}</div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
 
 const FOLDER_EMOJIS=['📁','📂','⭐','❤️','🎨','📷','🎬','🎵','📚','💡','📝','🌸','🌿','🌙','✨','🧩','🛍️','🍀','🎮','🏷️','🖼️','🧵','🪄','🔖'];
 function safeFolderColor(c){return /^#[0-9a-fA-F]{6}$/.test(String(c||''))?c:'#e3e7f0'}

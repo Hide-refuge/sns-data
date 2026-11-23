@@ -297,7 +297,51 @@ header.top .actions #openFolderCreate{display:inline-flex;align-items:center;jus
   header.top .actions #archiveMenuToggle{margin-left:auto}
 }
 </style>
-</head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><!-- security-20261123: 사용하지 않는 Supabase 외부 스크립트 제거 --><script src="./sync-config.js"></script><script src="./sync.js?v=cloud-linebreak-20261122-01"></script><script>
+<style id="mobilefit-20261123">
+/* mobilefit-20261123: 모바일 검수 반영 */
+/* 스크랩 버튼(긴 @계정·작성자 이름)이 카드 밖으로 넘치지 않게 */
+.note>*{min-width:0}
+.note-actions{min-width:0;max-width:100%}
+.note-actions>a,.note-actions>button{max-width:100%;overflow-wrap:anywhere;white-space:normal;text-align:left}
+/* 손가락 화면: 입력칸 글자 16px (iPhone이 누를 때 화면을 확대하지 않음), 메뉴 버튼 누르기 쉽게 */
+@media (pointer:coarse){
+ html body input:not(#_):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]):not([type=file]),html body select:not(#_),html body textarea:not(#_),
+ html body .cbh-api-panel :is(#cbhApiProvider,#cbhApiKey,#cbhApiPrompt){font-size:16px!important}
+ html body .archive-menu-drawer button:not(#_),html body #archiveMenuDrawer #syncControls button:not(#_){min-height:40px!important}
+ .crumb button{padding:10px 6px;margin:-10px -6px}
+}
+/* 손가락 화면: 마우스용 설명(말풍선·안내 문구) 숨김 */
+@media (hover:none){.folder:hover .tooltip,.folder:focus-visible .tooltip{display:none!important}.hover-only-hint{display:none}}
+/* 관리 메뉴는 항상 위에서부터 */
+html body .archive-menu-drawer{justify-content:flex-start!important}
+/* 폰트 설정 탭: 좁으면 줄바꿈, 글씨 크기 통일 */
+html body .font-dialog .font-section-tab-row:not(#_){flex-wrap:wrap!important;max-width:100%}
+html body .font-dialog .font-section-tab:not(#_){max-width:100%!important;white-space:normal!important}
+@media(max-width:650px){html body .font-dialog .font-section-tabs .font-section-tab-row:not(#_){grid-template-columns:repeat(2,minmax(0,max-content))!important}}
+html body .font-dialog .font-section-tab:not(#_){font-size:13px!important}
+/* 하위 폴더 생성 창: 좁은 화면은 한 줄에 하나씩 */
+@media(max-width:600px){
+ html body .subfolder-horizontal .subfolder-row2{grid-template-columns:minmax(0,1fr)!important;overflow:visible!important}
+ html body .subfolder-horizontal .subfolder-row2>.field{min-width:0!important}
+ html body .subfolder-horizontal .subfolder-create{width:100%!important}
+}
+/* 가로로 든 휴대폰: 설정 팝업을 메뉴 위 전체 폭으로 */
+@media (max-height:520px) and (max-width:1000px){
+ html body.archive-menu-open #modalRoot .overlay,html body.archive-menu-open .cbh-api-overlay{right:0!important;z-index:11020!important}
+}
+/* 휴대폰 배치 */
+@media(max-width:760px){
+ html body #archiveEyebrow{font-size:clamp(13px,4.2vw,26px);letter-spacing:.08em}
+ #view .grid:has(>.platform){grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ #view .platform{min-height:132px;padding:16px}
+ #view .platform strong{font-size:18px}
+ #view .platform .glyph{font-size:26px}
+ #view .folders{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #view .folders .folder{min-height:112px;padding:13px}
+ #view .folders .folder .foldericon{font-size:26px}
+ #view .folders .folder strong{font-size:15px;margin:8px 0 3px}
+}
+</style></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><!-- security-20261123: 사용하지 않는 Supabase 외부 스크립트 제거 --><script src="./sync-config.js"></script><script src="./sync.js?v=cloud-linebreak-20261122-01"></script><script>
 'use strict';
 let igSearchQuery='',igSearchActive=false,igAdvanced={folder:'',year:'',keyword:''},igSearchLayout='list';
 const DB_NAME='personal-scrap-hub-v1', DB_VERSION=1;let db,route={platform:null,folder:null},folders=[],posts=[];const $=id=>document.getElementById(id);const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const uid=()=>crypto.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2);const today=()=>new Date().toISOString();const formatDate=s=>s?new Date(s).toLocaleDateString('ko-KR'):'';window.scrapFontPosts=()=>posts;window.scrapFontFolders=()=>folders;window.scrapFontRoute=()=>route;const platforms={instagram:{name:'Instagram',glyph:'◎'},twitter:{name:'Twitter (X)',glyph:'𝕏'},youtube:{name:'YouTube',glyph:'▶'},naverblog:{name:'네이버 블로그',glyph:'N'}};
@@ -347,7 +391,7 @@ function folderOptionHtml(platform,selected,exclude){const disallowed=exclude?ne
 function folderCards(parentId,platform){const fs=folderChildren(parentId,platform);return fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>하위 폴더 ${folderChildren(f.id,platform).length}개 · 스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">하위 폴더가 없습니다.</div>'}
 function subfolderForm(){const color='#e3e7f0',icon='📁';return `<section class="panel subfolder-horizontal"><details class="subfolder-collapse"><summary class="subfolder-collapse-trigger">＋ 하위 폴더 <span class="subfolder-collapse-state" aria-hidden="true"></span></summary><form id="folderForm"><div class="subfolder-row1"><div class="field"><label for="folderName">폴더명</label><input id="folderName" maxlength="70" required></div><div class="field"><label for="folderDesc">설명</label><input id="folderDesc"></div></div><div class="subfolder-row2"><div class="field subfolder-icon-field"><label>폴더 아이콘 (이모지 선택)</label><div class="folder-emoji-options" hidden>${FOLDER_EMOJIS.map(e=>`<button type="button" class="btn ${e===icon?'selected':''}" data-emoji="${e}" aria-label="${e} 선택">${e}</button>`).join('')}</div><input type="hidden" name="icon" value="${icon}"></div><div class="field subfolder-color-field"><label>폴더 테두리 색상 (색상표 또는 HEX 코드)</label><div class="folder-color-picker"><input type="color" data-color-picker value="${color}" aria-label="테두리 색상 선택"><input type="text" name="color" data-color-text maxlength="7" value="${color}" placeholder="#000000" aria-label="HEX 색상 코드"></div></div><div class="subfolder-action"><button class="btn primary subfolder-create" type="submit">하위 폴더 생성</button></div></div></form></details></section>`}
 
-function render(){queueMicrotask(()=>window.scrapFontApply?.());queueMicrotask(syncFolderCreateButton);const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3>폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="folder-list-wrap">${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 상단의 + 폴더 생성 버튼으로 만들어 보세요.</div>'}</div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
+function render(){queueMicrotask(()=>window.scrapFontApply?.());queueMicrotask(syncFolderCreateButton);const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3 class="hover-only-hint">폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="folder-list-wrap">${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 상단의 + 폴더 생성 버튼으로 만들어 보세요.</div>'}</div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
 
 const FOLDER_EMOJIS=['📁','📂','⭐','❤️','🎨','📷','🎬','🎵','📚','💡','📝','🌸','🌿','🌙','✨','🧩','🛍️','🍀','🎮','🏷️','🖼️','🧵','🪄','🔖'];
 function safeFolderColor(c){return /^#[0-9a-fA-F]{6}$/.test(String(c||''))?c:'#e3e7f0'}
