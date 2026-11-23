@@ -62,10 +62,7 @@ async function request(path,data={}){
 }
 function open(){
  if(document.getElementById('cbhApiOverlay'))return;
- const drawer = document.getElementById('archiveMenuDrawer');
-if (drawer && !drawer.hidden) {
-  drawer.querySelector('.archive-menu-close')?.click();
-}
+ // menu-platforms-20261123: 메뉴를 닫지 않음 (팝업이 열린 동안 메뉴는 비활성화)
  const overlay=document.createElement('div');overlay.id='cbhApiOverlay';overlay.className='cbh-api-overlay';
  overlay.innerHTML=`<section class="cbh-api-panel" role="dialog" aria-modal="true" aria-labelledby="cbhApiTitle"><div class="cbh-api-header"><h2 id="cbhApiTitle">API Settings</h2><button id="cbhApiClose" type="button" class="cbh-api-close" aria-label="닫기">×</button></div>
  <p class="cbh-api-help">Claude와 OpenAI 모두 API 키를 직접 입력해야 합니다. Google 관리자 인증은 계속 필요합니다.</p>

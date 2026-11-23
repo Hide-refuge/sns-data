@@ -68,6 +68,16 @@
       "color": "#14a000",
       "icon": "🚀",
       "createdAt": "2026-11-22T07:17:11.728Z"
+    },
+    {
+      "id": "96e63fd4-d7d0-48bb-8358-48c014856217",
+      "platform": "instagram",
+      "parentId": null,
+      "name": "Test",
+      "description": "",
+      "color": "#e3e7f0",
+      "icon": "📁",
+      "createdAt": "2026-11-23T03:11:02.523Z"
     }
   ],
   "posts": [
