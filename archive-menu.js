@@ -189,6 +189,8 @@
     // Move original DOM elements, preserving their IDs, events, state and data bindings.
     const move = el => {
       if (el === toggle || el.tagName === 'INPUT') return;
+      // top-folder-create-modal-v1: 상단 '+ 폴더 생성' 버튼은 헤더에 유지
+      if (el.id === 'openFolderCreate') return;
       const label = `${el.id} ${el.textContent}`.toLowerCase();
       (label.includes('backup') || label.includes('export') || label.includes('import') ? backup : settings).appendChild(el);
     };
