@@ -1091,7 +1091,7 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,a,i
  bar.addEventListener('click',e=>{const b=e.target.closest('[data-navtab]');if(!b)return;const k=b.dataset.navtab||null;if(k===route.platform&&!route.folder){scrollTo({top:0,behavior:'smooth'});return}go(k,null)});
  const syncBar=()=>{bar.querySelectorAll('[data-navtab]').forEach(b=>{const on=(b.dataset.navtab||null)===(route.platform||null);b.classList.toggle('on',on);b.setAttribute('aria-current',on?'page':'false')});
   document.body.classList.toggle('has-tabbar',isPhone())};
- const all=()=>{tryDeep();syncBack();syncCount();syncStuck();syncFab();syncBar()};
+ const all=()=>{tryDeep();document.getElementById('navBack')?.remove(); /* noback-20261123: 뒤로 가기 글자 버튼 표시 안 함 */syncCount();syncStuck();syncFab();syncBar()};
  const start=()=>{document.body.append(fabs,bar);const v=view();if(v)new MutationObserver(all).observe(v,{childList:true,subtree:true});
   addEventListener('scroll',()=>{syncStuck();syncFab()},{passive:true});matchMedia(PHONE).addEventListener?.('change',all);all()};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
