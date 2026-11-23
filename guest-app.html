@@ -185,11 +185,128 @@ details > summary::before {
 .subfolder-horizontal details[open] .subfolder-collapse-state::after{content:"접기 ▴"}
 .subfolder-horizontal details[open] #folderForm{margin-top:14px}
 .subfolder-horizontal .subfolder-collapse-trigger:focus-visible{outline:2px solid #465cc7;outline-offset:4px;border-radius:4px}
-</style><style id="guest-readonly-style">
-#syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#addPost,#editFolder,#deleteFolder,
-#folderForm,.subfolder-create,[data-editpost],[data-delpost],[data-search-edit],
-[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,
-#folderReorderBtn,#folderReorderCancel,#folderReorderSave {display:none!important}
+/* item-move-20261123: 스크랩 끌어서 이동 */
+#postList .note.item-dragging{opacity:.4}
+#postList .note.item-selected{outline:3px solid #185DFF;outline-offset:2px;background:#edf3ff}
+#postList .note.item-drop-before{box-shadow:0 -4px 0 #185DFF}
+#postList .note.item-drop-after{box-shadow:0 4px 0 #185DFF}
+#postList.folder-post-grid .note.item-drop-before{box-shadow:-4px 0 0 #185DFF}
+#postList.folder-post-grid .note.item-drop-after{box-shadow:4px 0 0 #185DFF}
+.item-drop-into{box-shadow:inset 0 0 0 3px #185DFF!important;background:#edf3ff!important}
+.item-move-hint{font-size:12px;color:#8c91a0;font-weight:400;margin-left:8px}
+.folder-reorder-tip button+button{margin-left:6px}
+@media (hover:none){#postList .note{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}}
+</style><!-- mobile-popup-layer-fix:start -->
+<style>
+/* Mobile only: keep all existing dialogs above the management drawer. */
+@media (max-width: 650px) {
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot:has(.overlay),
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot:has(.overlay) .overlay {
+    z-index: 11020 !important;
+  }
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot:has(.overlay) {
+    position: relative;
+  }
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot .overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw;
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+  body:has(.archive-menu-drawer:not([hidden])) #modalRoot .dialog {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
+  }
+}
+</style>
+<!-- mobile-popup-layer-fix:end -->
+<style>
+/* mobile-font-tabs-intrinsic-2ch-v4 */
+@media (max-width: 650px) {
+  .font-section-tabs {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    gap: 6px !important;
+  }
+  .font-section-tabs .font-section-tab-row {
+    display: grid !important;
+    grid-template-columns: max-content max-content !important;
+    justify-content: center !important;
+    align-items: center !important;
+    justify-items: center !important;
+    column-gap: 6px !important;
+    row-gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+  .font-section-tabs .font-section-tab-row:first-child .font-section-tab:nth-child(3) {
+    grid-column: 1 / -1 !important;
+    justify-self: center !important;
+  }
+  .font-section-tabs .font-section-tab-row .font-section-tab {
+    box-sizing: border-box !important;
+    flex: none !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 32px !important;
+    height: auto !important;
+    padding: 6px 2ch !important;
+    font-size: clamp(9px, 2.5vw, 13px) !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+}
+</style>
+
+<!-- cleanup-20261123: 버튼 스타일 통합 (folder-action-button-size-v1 ~ folder-buttons-font14-v1 대체) -->
+<style>
+/* 폴더 화면 상단 버튼 4개: 높이 42px · 글자 14px */
+.section-head .actions > #editFolder,
+.section-head .actions > #deleteFolder,
+.section-head .actions > #openSubfolderModal,
+.section-head .actions > #addPost{
+  height:42px!important;min-height:42px!important;max-height:42px!important;
+  padding:0 12px!important;font-size:14px!important;font-weight:500!important;line-height:1!important;
+  border-radius:8px!important;box-sizing:border-box!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  vertical-align:middle!important;white-space:nowrap!important;flex-shrink:0!important}
+/* 상단 '+ 폴더 생성'·햄버거 버튼: 모든 화면에서 높이 42px */
+header.top .actions #openFolderCreate,
+header.top .actions #archiveMenuToggle{height:42px!important;min-height:42px!important;padding-top:0!important;padding-bottom:0!important;box-sizing:border-box!important}
+header.top .actions #openFolderCreate{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;white-space:nowrap}
+/* 터치 화면: 폴더를 누른 뒤 설명 말풍선이 화면에 남지 않도록 */
+@media (hover:none){.folder:hover .tooltip{display:none}}
+</style>
+
+<!-- top-folder-create-mobile-v1 -->
+<style>
+@media (max-width:760px){
+  header.top .actions{width:100%;display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:10px}
+  header.top .actions #openFolderCreate,
+  header.top .actions #archiveMenuToggle{height:42px!important;min-height:42px!important;padding-top:0!important;padding-bottom:0!important;box-sizing:border-box!important}
+  header.top .actions #openFolderCreate{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;padding-left:16px;padding-right:16px;white-space:nowrap}
+  header.top .actions #archiveMenuToggle{margin-left:auto}
+}
+</style>
+<!-- guestsync-20261123: 이 파일은 index.html에서 자동 생성됩니다 (guestsync.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
+<style id="guest-readonly-style">
+#syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#cbhApiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,.subfolder-create,#openFolderCreate,#openSubfolderModal,.item-move-hint,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave {display:none!important}
+/* 기본 화면의 버튼 통합 스타일(display:inline-flex!important)보다 우선하도록 더 구체적인 선택자로 한 번 더 숨김 */
+html body .section-head .actions > #editFolder,html body .section-head .actions > #deleteFolder,
+html body .section-head .actions > #openSubfolderModal,html body .section-head .actions > #addPost,
+html body header.top .actions #openFolderCreate {display:none!important}
+/* 게스트: 끌어서 옮기기 기능이 없으므로 카드 위에서도 화면 스크롤·글자 선택 가능 */
+.folders .folder{touch-action:auto!important}
+#postList .note{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
@@ -204,11 +321,11 @@ document.addEventListener('DOMContentLoaded',()=>{
    actions.style.alignItems='center';
    actions.style.flexWrap='nowrap';
    actions.style.gap='3ch';
-    actions.style.justifyContent='flex-end';
-    actions.style.marginLeft='auto';
+   actions.style.justifyContent='flex-end';
+   actions.style.marginLeft='auto';
  }
  const hide=()=>{
-   document.querySelectorAll('#syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave').forEach(x=>{x.hidden=true;x.style.display='none'});
+   document.querySelectorAll('#syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#cbhApiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,.subfolder-create,#openFolderCreate,#openSubfolderModal,.item-move-hint,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave').forEach(x=>{x.hidden=true;x.style.display='none'});
    document.querySelectorAll('#view button').forEach(x=>{if(/^(추가|수정|삭제|편집|저장|폴더 생성|스크랩 추가)$/.test(x.textContent.trim())){x.hidden=true;x.style.display='none'}});
  };
  const view=document.getElementById('view');if(view)new MutationObserver(hide).observe(view,{childList:true,subtree:true});hide();
@@ -216,7 +333,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 document.addEventListener('submit',e=>{if(e.target.closest('#view,#modalRoot')&&!e.target.closest('.font-dialog')){e.preventDefault();e.stopImmediatePropagation();alert('게스트 모드에서는 데이터를 변경할 수 없습니다.')}},true);
 document.addEventListener('click',e=>{
  const t=e.target.closest('button');if(!t)return;
- if(t.matches('#addPost,#editFolder,#deleteFolder,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],#folderReorderBtn,#folderReorderSave,#folderReorderCancel')){e.preventDefault();e.stopImmediatePropagation()}
+ if(t.matches('#addPost,#editFolder,#deleteFolder,#openFolderCreate,#openSubfolderModal,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],#folderReorderBtn,#folderReorderSave,#folderReorderCancel')){e.preventDefault();e.stopImmediatePropagation()}
 },true);
 </script></head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><script>window.SCRAP_GUEST_MODE=true;</script><script>
 'use strict';
@@ -256,7 +373,7 @@ function folderOptionHtml(platform,selected,exclude){const disallowed=exclude?ne
 function folderCards(parentId,platform){const fs=folderChildren(parentId,platform);return fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>하위 폴더 ${folderChildren(f.id,platform).length}개 · 스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">하위 폴더가 없습니다.</div>'}
 function subfolderForm(){const color='#e3e7f0',icon='📁';return `<section class="panel subfolder-horizontal"><details class="subfolder-collapse"><summary class="subfolder-collapse-trigger">＋ 하위 폴더 <span class="subfolder-collapse-state" aria-hidden="true"></span></summary><form id="folderForm"><div class="subfolder-row1"><div class="field"><label for="folderName">폴더명</label><input id="folderName" maxlength="70" required></div><div class="field"><label for="folderDesc">설명</label><input id="folderDesc"></div></div><div class="subfolder-row2"><div class="field subfolder-icon-field"><label>폴더 아이콘 (이모지 선택)</label><div class="folder-emoji-options" hidden>${FOLDER_EMOJIS.map(e=>`<button type="button" class="btn ${e===icon?'selected':''}" data-emoji="${e}" aria-label="${e} 선택">${e}</button>`).join('')}</div><input type="hidden" name="icon" value="${icon}"></div><div class="field subfolder-color-field"><label>폴더 테두리 색상 (색상표 또는 HEX 코드)</label><div class="folder-color-picker"><input type="color" data-color-picker value="${color}" aria-label="테두리 색상 선택"><input type="text" name="color" data-color-text maxlength="7" value="${color}" placeholder="#000000" aria-label="HEX 색상 코드"></div></div><div class="subfolder-action"><button class="btn primary subfolder-create" type="submit">하위 폴더 생성</button></div></div></form></details></section>`}
 
-function render(){queueMicrotask(()=>window.scrapFontApply?.());const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3>폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="split"><div>${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 오른쪽에서 만들어 보세요.</div>'}</div><aside class="panel"><h3>＋ 새 폴더</h3><form id="folderForm"><div class="field"><label for="folderName">폴더명 / 정보 종류</label><input id="folderName" maxlength="70" required placeholder="예: 디자인 레퍼런스"></div>${folderStyleFields()}<div class="field"><label for="folderDesc">설정 정보 메모</label><textarea id="folderDesc" placeholder="이 폴더에 저장할 자료의 기준"></textarea></div><button class="btn primary" type="submit">폴더 생성</button></form><p class="hint">저장 수량은 스크랩 추가·삭제 시 자동 계산됩니다.</p></aside></div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
+function render(){queueMicrotask(()=>window.scrapFontApply?.());queueMicrotask(syncFolderCreateButton);const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3>폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="folder-list-wrap">${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 상단의 + 폴더 생성 버튼으로 만들어 보세요.</div>'}</div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
 
 const FOLDER_EMOJIS=['📁','📂','⭐','❤️','🎨','📷','🎬','🎵','📚','💡','📝','🌸','🌿','🌙','✨','🧩','🛍️','🍀','🎮','🏷️','🖼️','🧵','🪄','🔖'];
 function safeFolderColor(c){return /^#[0-9a-fA-F]{6}$/.test(String(c||''))?c:'#e3e7f0'}
@@ -288,7 +405,7 @@ function updateHomeResults(){
  root.innerHTML=list.length?list.map(p=>`<article class="note ${homeDisplay}" data-font-post="${escapeHtml(p.id)}"><div class="note-main">${homeDisplay!=='detail'&&(p.images||[]).length?`<div class="note-cover"><img tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="0" src="${escapeHtml(p.images[0])}" alt="대표 이미지"></div>`:''}<div class="note-text"><span class="platform-tag-search">${p.platform==='instagram'?'INSTAGRAM':p.platform==='twitter'?'TWITTER (X)':p.platform==='youtube'?'YOUTUBE':p.platform==='naverblog'?'NAVER BLOG':escapeHtml(String(p.platform||'OTHER').toUpperCase())}</span><h3>${escapeHtml(p.title||'제목 없음')}</h3><div class="chips">${(p.keywords||[]).map(k=>`<span class="chip">#${escapeHtml(k)}</span>`).join('')}<span class="chip">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div><p class="summary">${escapeHtml(p.summary||'')}</p><div class="thumbs">${(p.images||[]).map((img,i)=>`<img class="thumb" tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="${i}" src="${escapeHtml(img)}" alt="첨부 이미지 ${i+1}">`).join('')}</div><div class="meta">추가일 ${formatDate(p.createdAt)} · 이미지 ${(p.images||[]).length}장</div></div></div><div class="note-actions"><a class="btn" href="${escapeHtml(p.url||'#')}" target="_blank" rel="noopener noreferrer">원문 ↗</a><button class="btn" data-home-open="${escapeHtml(p.folderId)}" data-home-platform="${escapeHtml(p.platform)}">폴더 열기</button></div></article>`).join(''):'<div class="empty">검색 결과가 없습니다.</div>';
  queueMicrotask(()=>window.scrapFontApply?.());
 }
-function renderFolder(){const f=folders.find(x=>x.id===route.folder);if(!f){route.folder=null;render();return}const v=$('view');v.innerHTML=`<div class="section-head"><div><h2>${escapeHtml(f.name)}</h2><h3>키워드: ${escapeHtml(f.description||'설명 없음')}</h3></div><div class="actions"><button class="btn" id="editFolder">폴더 수정</button><button class="btn danger" id="deleteFolder">폴더 삭제</button><button class="btn primary" id="addPost">＋ 스크랩 추가</button></div></div><div class="toolbar folder-toolbar"><input id="search" type="search" placeholder="제목·키워드·내용 검색"><select id="sort" aria-label="정렬"><option value="new">추가일 최신순</option><option value="old">추가일 오래된순</option><option value="priority">중요도 높은순</option><option value="name">가나다순</option></select><select id="display" aria-label="표시 방식"><option value="detail">상세형</option><option value="compact">간략형</option><option value="titleonly">제목형</option></select><div class="folder-view-controls"><span class="pill" id="postCount"></span><button type="button" class="btn folder-layout-toggle" id="folderLayoutToggle" aria-label="폴더 스크랩 레이아웃 전환" title="리스트뷰와 그리드뷰 전환">▦ 그리드뷰로 전환</button></div></div><div class="section-head"><h3>하위 폴더</h3></div><div class="subfolder-area">${subfolderForm()}<div class="subfolder-list">${folderCards(f.id,f.platform)}</div></div><div class="section-head"><h3>현재 폴더의 스크랩</h3></div><div id="postList"></div>`;initFolderStyleControls(v);const emoji=v.querySelector('.subfolder-horizontal .folder-emoji-options'),toggle=v.querySelector('.subfolder-emoji-toggle');if(emoji&&toggle){toggle.onclick=()=>{emoji.hidden=!emoji.hidden;toggle.setAttribute('aria-expanded',String(!emoji.hidden))}}updatePostList()}
+function renderFolder(){const f=folders.find(x=>x.id===route.folder);if(!f){route.folder=null;render();return}const v=$('view');v.innerHTML=`<div class="section-head"><div><h2>${escapeHtml(f.name)}</h2><h3>키워드: ${escapeHtml(f.description||'설명 없음')}</h3></div><div class="actions"><button class="btn" id="editFolder">폴더 수정</button><button class="btn danger" id="deleteFolder">폴더 삭제</button><button class="btn primary" type="button" id="openSubfolderModal">+ 하위 폴더 생성</button><button class="btn primary" id="addPost">＋ 스크랩 추가</button></div></div><div class="toolbar folder-toolbar"><input id="search" type="search" placeholder="제목·키워드·내용 검색"><select id="sort" aria-label="정렬"><option value="new">추가일 최신순</option><option value="old">추가일 오래된순</option><option value="priority">중요도 높은순</option><option value="name">가나다순</option><option value="manual">직접 정렬</option></select><select id="display" aria-label="표시 방식"><option value="detail">상세형</option><option value="compact">간략형</option><option value="titleonly">제목형</option></select><div class="folder-view-controls"><span class="pill" id="postCount"></span><button type="button" class="btn folder-layout-toggle" id="folderLayoutToggle" aria-label="폴더 스크랩 레이아웃 전환" title="리스트뷰와 그리드뷰 전환">▦ 그리드뷰로 전환</button></div></div><div class="section-head"><h3>하위 폴더<span class="item-move-hint">길게 눌러 순서 변경 · 다른 폴더로 이동</span></h3></div><div class="subfolder-area"><div class="subfolder-list">${folderCards(f.id,f.platform)}</div></div><div class="section-head"><h3>현재 폴더의 스크랩<span class="item-move-hint">길게 눌러 순서 변경 · 다른 폴더로 이동</span></h3></div><div id="postList"></div>`;initFolderStyleControls(v);const emoji=v.querySelector('.subfolder-horizontal .folder-emoji-options'),toggle=v.querySelector('.subfolder-emoji-toggle');if(emoji&&toggle){toggle.onclick=()=>{emoji.hidden=!emoji.hidden;toggle.setAttribute('aria-expanded',String(!emoji.hidden))}}if($('sort')&&posts.some(p=>p.folderId===f.id&&Number.isFinite(p.sortOrder)))$('sort').value='manual';updatePostList()}
 
 // 표시 방식에 관계없이 저장된 작성자 정보를 직접 확인하여 버튼을 생성합니다.
 function folderAuthorButtons(p,mode){
@@ -302,8 +419,51 @@ function folderAuthorButtons(p,mode){
   return nameButton||handleButton;
 }
 
-function updatePostList(){queueMicrotask(()=>window.scrapFontApply?.());if(!route.folder||!$('postList'))return;const q=$('search').value.trim().toLocaleLowerCase(),sort=$('sort').value,mode=$('display').value;let list=posts.filter(p=>p.folderId===route.folder&&[p.title,p.summary,(p.keywords||[]).join(' ')].join(' ').toLocaleLowerCase().includes(q));list.sort((a,b)=>sort==='name'?a.title.localeCompare(b.title,'ko'):sort==='priority'?(b.priority||0)-(a.priority||0)||b.createdAt.localeCompare(a.createdAt):sort==='old'?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt));$('postCount').textContent=`${list.length}개`; $('postList').classList.toggle('folder-post-grid',folderLayout==='grid');const toggle=$('folderLayoutToggle');if(toggle){toggle.textContent=folderLayout==='list'?'▦ 그리드뷰로 전환':'☰ 리스트뷰로 전환';toggle.setAttribute('aria-label',folderLayout==='list'?'그리드뷰로 전환':'리스트뷰로 전환');toggle.setAttribute('aria-pressed',String(folderLayout==='grid'));} $('postList').innerHTML=list.length?list.map(p=>`<article class="note ${mode}" data-font-post="${escapeHtml(p.id)}"><div class="note-main">${mode!=='detail'&&(p.images||[]).length?`<div class="note-cover"><img tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="0" src="${p.images[0]}" alt="${escapeHtml(p.title)} 대표 이미지 확대">${p.images.length>1?`<span class="cover-count">+${p.images.length-1}</span>`:''}</div>`:''}<div class="note-text"><h3>${escapeHtml(p.title)}</h3><div class="chips">${(p.keywords||[]).map(k=>`<span class="chip">#${escapeHtml(k)}</span>`).join('')}<span class="chip" title="중요도">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div><p class="summary">${escapeHtml(p.summary)}</p><div class="thumbs">${(p.images||[]).map((img,i)=>`<img class="thumb" tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="${i}" src="${img}" alt="첨부 이미지 ${i+1}">`).join('')}</div><div class="meta">추가일 ${formatDate(p.createdAt)} · 이미지 ${(p.images||[]).length}장</div>${mode==='titleonly'?`<div class="title-priority"><span class="chip" title="중요도">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div>`:''}</div></div><div class="note-actions"><a class="btn" href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer">원문 ↗</a>${folderAuthorButtons(p,mode)}${mode==='detail'?`<button class="btn edit-action" data-editpost="${escapeHtml(p.id)}">수정</button><button class="btn danger delete-action" data-delpost="${escapeHtml(p.id)}">삭제</button>`:''}</div></article>`).join(''):'<div class="empty">검색 결과가 없거나 아직 등록된 스크랩이 없습니다.</div>'}
-function closeModal(){$('modalRoot').innerHTML=''}function modal(content){$('modalRoot').innerHTML=`<div class="overlay" id="overlay"><div class="dialog" role="dialog" aria-modal="true">${content}</div></div>`}
+function updatePostList(){queueMicrotask(()=>window.scrapFontApply?.());if(!route.folder||!$('postList'))return;const q=$('search').value.trim().toLocaleLowerCase(),sort=$('sort').value,mode=$('display').value;let list=posts.filter(p=>p.folderId===route.folder&&[p.title,p.summary,(p.keywords||[]).join(' ')].join(' ').toLocaleLowerCase().includes(q));list.sort((a,b)=>sort==='manual'?manualPostCompare(a,b):sort==='name'?a.title.localeCompare(b.title,'ko'):sort==='priority'?(b.priority||0)-(a.priority||0)||b.createdAt.localeCompare(a.createdAt):sort==='old'?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt));$('postCount').textContent=`${list.length}개`; $('postList').classList.toggle('folder-post-grid',folderLayout==='grid');const toggle=$('folderLayoutToggle');if(toggle){toggle.textContent=folderLayout==='list'?'▦ 그리드뷰로 전환':'☰ 리스트뷰로 전환';toggle.setAttribute('aria-label',folderLayout==='list'?'그리드뷰로 전환':'리스트뷰로 전환');toggle.setAttribute('aria-pressed',String(folderLayout==='grid'));} $('postList').innerHTML=list.length?list.map(p=>`<article class="note ${mode}" data-font-post="${escapeHtml(p.id)}"><div class="note-main">${mode!=='detail'&&(p.images||[]).length?`<div class="note-cover"><img tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="0" src="${p.images[0]}" alt="${escapeHtml(p.title)} 대표 이미지 확대">${p.images.length>1?`<span class="cover-count">+${p.images.length-1}</span>`:''}</div>`:''}<div class="note-text"><h3>${escapeHtml(p.title)}</h3><div class="chips">${(p.keywords||[]).map(k=>`<span class="chip">#${escapeHtml(k)}</span>`).join('')}<span class="chip" title="중요도">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div><p class="summary">${escapeHtml(p.summary)}</p><div class="thumbs">${(p.images||[]).map((img,i)=>`<img class="thumb" tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="${i}" src="${img}" alt="첨부 이미지 ${i+1}">`).join('')}</div><div class="meta">추가일 ${formatDate(p.createdAt)} · 이미지 ${(p.images||[]).length}장</div>${mode==='titleonly'?`<div class="title-priority"><span class="chip" title="중요도">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div>`:''}</div></div><div class="note-actions"><a class="btn" href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer">원문 ↗</a>${folderAuthorButtons(p,mode)}${mode==='detail'?`<button class="btn edit-action" data-editpost="${escapeHtml(p.id)}">수정</button><button class="btn danger delete-action" data-delpost="${escapeHtml(p.id)}">삭제</button>`:''}</div></article>`).join(''):'<div class="empty">검색 결과가 없거나 아직 등록된 스크랩이 없습니다.</div>'}
+function closeModal(){$('modalRoot').innerHTML=''}
+// top-folder-create-modal-v1: 상위 폴더 생성을 상단 버튼 + 중앙 팝업으로 전환
+function syncFolderCreateButton(){if(window.SCRAP_GUEST_MODE){document.getElementById('openFolderCreate')?.remove();return}
+  const show=Boolean(route.platform&&!route.folder);
+  let btn=document.getElementById('openFolderCreate');
+  if(!show){if(btn)btn.remove();return}
+  const actions=document.querySelector('header.top .actions');
+  if(!actions)return;
+  if(!btn){btn=document.createElement('button');btn.type='button';btn.id='openFolderCreate';btn.className='btn primary';btn.textContent='+ 폴더 생성'}
+  const toggle=document.getElementById('archiveMenuToggle');
+  if(toggle&&toggle.parentElement===actions){if(btn.nextElementSibling!==toggle)actions.insertBefore(btn,toggle)}
+  else if(btn.parentElement!==actions)actions.appendChild(btn);
+}
+function openFolderCreateModal(){
+  if(!route.platform||route.folder)return;
+  modal(`<h2>새 폴더 생성</h2><form id="folderForm"><div class="field"><label for="folderName">폴더명 / 정보 종류</label><input id="folderName" maxlength="70" required placeholder="예: 디자인 레퍼런스"></div>${folderStyleFields()}<div class="field"><label for="folderDesc">설정 정보 메모</label><textarea id="folderDesc" placeholder="이 폴더에 저장할 자료의 기준"></textarea></div><div class="actions" style="justify-content:flex-end"><button class="btn" type="button" data-close>취소</button><button class="btn primary" type="submit">폴더 생성</button></div></form>`);
+  initFolderStyleControls($('modalRoot'));
+  setTimeout(()=>$('folderName')?.focus(),0);
+}
+document.addEventListener('click',e=>{if(e.target.closest('#openFolderCreate'))openFolderCreateModal()});
+// subfolder-modal-button-v1
+function openSubfolderModal(){
+  modal('<h2>하위 폴더 생성</h2>' + subfolderForm());
+
+  const form = document.querySelector('#modalRoot #folderForm');
+  if (form) {
+    form.addEventListener('submit', () => {
+      setTimeout(() => {
+        const root = document.querySelector('#modalRoot');
+        if (root && root.querySelector('#folderForm')) {
+          closeModal();
+        }
+      }, 100);
+    });
+  }
+}
+
+document.addEventListener('click', (event) => {
+  if (event.target.closest('#openSubfolderModal')) {
+    openSubfolderModal();
+  }
+});
+
+function modal(content){$('modalRoot').innerHTML=`<div class="overlay" id="overlay"><div class="dialog" role="dialog" aria-modal="true">${content}</div></div>`}
 function folderModal(f){modal(`<h2>폴더 수정</h2><form id="folderEditForm"><div class="field"><label>폴더명</label><input name="name" required maxlength="70" value="${escapeHtml(f.name)}"></div><div class="field"><label>설명</label><textarea name="description">${escapeHtml(f.description)}</textarea></div>${folderStyleFields(f)}<div class="field"><label>상위 폴더</label><select name="parentId"><option value="">최상위 폴더</option>${folderOptionHtml(f.platform,folderParent(f),f.id)}</select></div><div class="actions"><button class="btn primary" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`);$('folderEditForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);const style=readFolderStyle(e.target);if(!style)return;await put('folders',{...f,name:String(fd.get('name')).trim(),description:String(fd.get('description')).trim(),parentId:String(fd.get('parentId')||'')||null,...style});closeModal();await refresh()};initFolderStyleControls($('folderEditForm'))}
 function keywordSuggestion(text){const words=String(text).replace(/https?:\/\/\S+/g,' ').match(/[가-힣A-Za-z0-9]{2,}/g)||[];const stop=new Set(['그리고','하지만','있는','대한','관련','정보','내용','정리','위한','this','that','with','from']);const count={};for(const w of words){const k=w.toLowerCase();if(!stop.has(k))count[k]=(count[k]||0)+1}return Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
 function validUrl(value){try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)}catch{return false}}
@@ -339,7 +499,7 @@ async function exportBackup(){
 async function importBackup(file){if(!file)return;try{if(file.size>80*1024*1024)throw Error('파일이 80MB를 초과합니다.');const data=JSON.parse(await file.text());if(data.version!==1||!Array.isArray(data.folders)||!Array.isArray(data.posts))throw Error('지원하지 않는 백업 형식입니다.');if(!confirm(`폴더 ${data.folders.length}개와 스크랩 ${data.posts.length}개를 가져오시겠습니까? 같은 ID는 덮어씁니다.`))return;for(const f of data.folders){if(typeof f.id==='string'&&platforms[f.platform]&&typeof f.name==='string')await put('folders',f)}for(const p of data.posts){if(typeof p.id==='string'&&platforms[p.platform]&&validUrl(p.url)&&typeof p.folderId==='string'&&Array.isArray(p.images))await put('posts',p)}await refresh();alert('가져오기가 완료되었습니다.')}catch(err){alert('가져오기 실패: '+err.message)}finally{$('importFile').value=''}}
 
 /* Folder reorder: dedicated touch drag with fixed floating preview. */
-(()=>{
+(()=>{if(window.SCRAP_GUEST_MODE)return;
  let pending=null,active=null,selected=null,blockClickUntil=0;
  const card=node=>node?.closest?.('.folders .folder[data-folder]');
  const clearPending=()=>{if(pending?.timer)clearTimeout(pending.timer);pending=null};
@@ -424,7 +584,7 @@ async function importBackup(file){if(!file)return;try{if(file.size>80*1024*1024)
  function showTip(){
    let tip=document.getElementById('folderReorderTip');
    if(!tip){tip=document.createElement('div');tip.id='folderReorderTip';tip.className='folder-reorder-tip';document.body.appendChild(tip)}
-   tip.innerHTML='이동할 위치의 다른 폴더를 터치하세요. <button type="button" id="folderReorderCancel">취소</button>';
+   tip.innerHTML='순서를 바꿀 위치의 폴더를 터치하세요. <button type="button" id="folderMoveOpen">다른 폴더로 이동</button><button type="button" id="folderReorderCancel">취소</button>';
  }
  function stopSelection(){selected?.classList.remove('folder-reorder-selected');selected=null;document.getElementById('folderReorderTip')?.remove()}
  async function saveSelection(target){
@@ -444,13 +604,122 @@ async function importBackup(file){if(!file)return;try{if(file.size>80*1024*1024)
    }catch(err){alert('폴더 순서 저장 실패: '+(err?.message||err));await refresh()}
  }
  document.addEventListener('click',e=>{
-   if(e.target.closest?.('#folderReorderCancel')){e.preventDefault();e.stopImmediatePropagation();stopSelection();return}
+   if(e.target.closest?.('#folderMoveOpen')){e.preventDefault();e.stopImmediatePropagation();const id=selected?.dataset.folder;stopSelection();blockClickUntil=0;if(id)window.openItemMoveDialog?.('folder',id);return}if(e.target.closest?.('#folderReorderCancel')){e.preventDefault();e.stopImmediatePropagation();stopSelection();return}
    const target=card(e.target);
-   if(selected&&target){e.preventDefault();e.stopImmediatePropagation();void saveSelection(target);return}
+   if(selected&&target){e.preventDefault();e.stopImmediatePropagation();if(target===selected&&Date.now()<blockClickUntil)return;void saveSelection(target);return}
    if(Date.now()<blockClickUntil&&target){e.preventDefault();e.stopImmediatePropagation()}
  },true);
 })();
-document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder),related=posts.filter(p=>p.folderId===f.id);if(folderChildren(f.id,f.platform).length){alert('하위 폴더가 존재합니다. 하위 폴더를 먼저 이동하거나 삭제해 주세요.');return}if(confirm(`'${f.name}' 폴더와 스크랩 ${related.length}개를 모두 삭제하시겠습니까?`)){for(const p of related)await del('posts',p.id);await del('folders',f.id);route.folder=null;await refresh()}}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){if(confirm('이 스크랩을 삭제하시겠습니까?')){await del('posts',t.dataset.delpost);await refresh()}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;await put('folders',{id:uid(),platform:route.platform,parentId:route.folder||null,name,description,...style,createdAt:today()});await refresh()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);fetch('./guest-data.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(data=>{
+/* item-move-20261123: 스크랩 길게 눌러 순서 변경 · 다른 폴더로 이동, 폴더 이동 선택 창 */
+function manualPostCompare(a,b){const ao=Number.isFinite(a.sortOrder)?a.sortOrder:-1,bo=Number.isFinite(b.sortOrder)?b.sortOrder:-1;if(ao===-1&&bo===-1)return String(b.createdAt||'').localeCompare(String(a.createdAt||''));return ao-bo}
+(()=>{
+ if(window.SCRAP_GUEST_MODE)return;
+ const LONG=420,TOL=9,EDGE=70;
+ let pending=null,active=null,selected=null,blockClickUntil=0,scrollRaf=0;
+ const noteOf=n=>n?.closest?.('#postList .note[data-font-post]');
+ const folderCardOf=n=>n?.closest?.('#view .folders .folder[data-folder]');
+ const crumbOf=n=>n?.closest?.('#crumb button[data-folder]');
+ const isControl=n=>n?.closest?.('a,button,select,input,textarea,label,img,.thumb');
+ const postById=id=>posts.find(p=>p.id===id);
+ const clearPending=()=>{if(pending?.timer)clearTimeout(pending.timer);pending=null};
+ const searching=()=>Boolean($('search')?.value.trim());
+ function toast(msg){let t=document.getElementById('itemMoveToast');if(!t){t=document.createElement('div');t.id='itemMoveToast';t.className='folder-reorder-tip';document.body.appendChild(t)}t.textContent=msg;clearTimeout(t._h);t._h=setTimeout(()=>t.remove(),2600)}
+ async function movePost(p,folderId){
+   if(!p||!folderId||p.folderId===folderId)return false;
+   const dest=folders.find(f=>f.id===folderId);if(!dest)return false;
+   const rec={...p,folderId,updatedAt:today()};delete rec.sortOrder;
+   await put('posts',rec);toast(`‘${p.title||'제목 없음'}’ → ‘${dest.name}’ 폴더로 이동했습니다.`);return true;
+ }
+ async function moveFolder(f,parentId){
+   parentId=parentId||null;
+   if(!f||folderParent(f)===parentId)return false;
+   if(parentId&&(parentId===f.id||folderDescendants(f.id).has?.(parentId)||[...folderDescendants(f.id)].includes(parentId)))throw Error('자기 자신이나 하위 폴더 안으로는 옮길 수 없습니다.');
+   const sib=folderChildren(parentId,f.platform).filter(x=>x.id!==f.id);
+   const next=sib.reduce((m,x)=>Number.isFinite(x.sortOrder)?Math.max(m,x.sortOrder+1):m,sib.length);
+   await put('folders',{...f,parentId,sortOrder:next});
+   const dest=parentId?folders.find(x=>x.id===parentId)?.name:'최상위';toast(`‘${f.name}’ → ‘${dest}’(으)로 이동했습니다.`);return true;
+ }
+ async function reorderPost(dragId,targetId,after){
+   const ids=[...document.querySelectorAll('#postList .note[data-font-post]')].map(n=>n.dataset.fontPost);
+   const from=ids.indexOf(dragId);if(from<0||!ids.includes(targetId)||dragId===targetId)return;
+   ids.splice(from,1);let to=ids.indexOf(targetId)+(after?1:0);ids.splice(to,0,dragId);
+   for(let i=0;i<ids.length;i++){const p=postById(ids[i]);if(p&&p.sortOrder!==i)await put('posts',{...p,sortOrder:i})}
+   toast('스크랩 순서를 바꿨습니다. (정렬: 직접 정렬)');
+ }
+ async function run(job){try{await job()}catch(err){alert('이동 실패: '+(err?.message||err))}await refresh()}
+ window.openItemMoveDialog=(kind,id)=>{
+   const isFolder=kind==='folder',item=isFolder?folders.find(f=>f.id===id):postById(id);if(!item)return;
+   const current=isFolder?folderParent(item):item.folderId;
+   const opts=isFolder?`<option value="" ${current?'':'selected'}>최상위 (${escapeHtml(platforms[item.platform]?.name||'플랫폼')} 바로 아래)</option>`+folderOptionHtml(item.platform,current,item.id):folderOptionHtml(item.platform,current);
+   modal(`<h2>${isFolder?'폴더':'스크랩'} 이동</h2><form id="itemMoveForm"><p class="hint">‘${escapeHtml(isFolder?item.name:(item.title||'제목 없음'))}’을(를) 옮길 위치를 고르세요.</p><div class="field"><label for="itemMoveTarget">이동할 폴더</label><select id="itemMoveTarget">${opts}</select></div><div class="actions" style="justify-content:flex-end"><button class="btn" type="button" data-close>취소</button><button class="btn primary" type="submit">이동</button></div></form>`);
+   $('itemMoveForm').onsubmit=async e=>{e.preventDefault();const v=$('itemMoveTarget').value;closeModal();await run(()=>isFolder?moveFolder(item,v||null):movePost(item,v))};
+ };
+ // ── 끌기
+ function dropTargetAt(x,y,d){
+   const el=document.elementFromPoint(x,y);
+   const n=noteOf(el);
+   if(n&&n!==d.el){if(searching())return null;const r=n.getBoundingClientRect(),grid=$('postList')?.classList.contains('folder-post-grid');return {kind:'note',el:n,after:grid?x>r.left+r.width/2:y>r.top+r.height/2}}
+   const fc=folderCardOf(el);if(fc&&fc.dataset.folder!==route.folder)return {kind:'folder',el:fc};
+   const cb=crumbOf(el);if(cb&&cb.dataset.folder!==route.folder)return {kind:'folder',el:cb};
+   return null;
+ }
+ function paint(d,t){
+   d.target?.el.classList.remove('item-drop-before','item-drop-after','item-drop-into');d.target=t;
+   if(t)t.el.classList.add(t.kind==='note'?(t.after?'item-drop-after':'item-drop-before'):'item-drop-into');
+ }
+ function startDrag(el,x,y){
+   if(selected||!el.isConnected)return;
+   const b=el.getBoundingClientRect(),ghost=el.cloneNode(true);
+   ghost.removeAttribute('data-font-post');
+   Object.assign(ghost.style,{position:'fixed',left:b.left+'px',top:b.top+'px',width:b.width+'px',height:Math.min(b.height,220)+'px',overflow:'hidden',margin:'0',zIndex:'99999',pointerEvents:'none',opacity:'.95',boxShadow:'0 12px 30px #1d33603b',background:'#fff'});
+   document.body.appendChild(ghost);
+   active={el,ghost,dx:x-b.left,dy:y-b.top,x,y,target:null};
+   el.classList.add('item-dragging');blockClickUntil=Date.now()+450;
+   const loop=()=>{if(!active)return;const d=active;let dy=d.y<EDGE?-14:d.y>innerHeight-EDGE?14:0;if(dy){scrollBy(0,dy);paint(d,dropTargetAt(d.x,d.y,d))}scrollRaf=requestAnimationFrame(loop)};scrollRaf=requestAnimationFrame(loop);
+ }
+ function moveDrag(x,y){if(!active)return;const d=active;d.x=x;d.y=y;d.ghost.style.left=(x-d.dx)+'px';d.ghost.style.top=(y-d.dy)+'px';paint(d,dropTargetAt(x,y,d))}
+ async function finishDrag(cancel){
+   clearPending();if(!active)return;
+   const d=active;active=null;cancelAnimationFrame(scrollRaf);blockClickUntil=Date.now()+450;
+   d.ghost.remove();d.el.classList.remove('item-dragging');const t=d.target;paint(d,null);
+   if(cancel)return;
+   const id=d.el.dataset.fontPost;
+   if(!t){select(d.el);return}
+   if(t.kind==='note')await run(()=>reorderPost(id,t.el.dataset.fontPost,t.after));
+   else await run(()=>movePost(postById(id),t.el.dataset.folder));
+ }
+ // ── 길게 누르고 뗐을 때: 선택 모드
+ function select(el){
+   selected=el;el.classList.add('item-selected');
+   let tip=document.getElementById('itemMoveTip');if(!tip){tip=document.createElement('div');tip.id='itemMoveTip';tip.className='folder-reorder-tip';document.body.appendChild(tip)}
+   tip.innerHTML=(searching()?'하위 폴더를 터치하면 그 폴더로 옮깁니다.':'옮길 위치의 스크랩이나 하위 폴더를 터치하세요.')+' <button type="button" id="itemMoveOpen">다른 폴더로 이동</button><button type="button" id="itemMoveCancel">취소</button>';
+ }
+ function unselect(){selected?.classList.remove('item-selected');selected=null;document.getElementById('itemMoveTip')?.remove()}
+ document.addEventListener('click',e=>{
+   if(e.target.closest?.('#itemMoveOpen')){e.preventDefault();e.stopImmediatePropagation();const id=selected?.dataset.fontPost;unselect();if(id)window.openItemMoveDialog('post',id);return}
+   if(e.target.closest?.('#itemMoveCancel')){e.preventDefault();e.stopImmediatePropagation();unselect();return}
+   if(selected){
+     const id=selected.dataset.fontPost,n=noteOf(e.target),fc=folderCardOf(e.target)||crumbOf(e.target);
+     if(n&&n!==selected&&!searching()){e.preventDefault();e.stopImmediatePropagation();const ids=[...document.querySelectorAll('#postList .note[data-font-post]')].map(x=>x.dataset.fontPost);const after=ids.indexOf(n.dataset.fontPost)>ids.indexOf(id);unselect();void run(()=>reorderPost(id,n.dataset.fontPost,after));return}
+     if(fc&&fc.dataset.folder!==route.folder){e.preventDefault();e.stopImmediatePropagation();unselect();void run(()=>movePost(postById(id),fc.dataset.folder));return}
+     if(n===selected){e.preventDefault();e.stopImmediatePropagation();return}
+     unselect();return;
+   }
+   if(Date.now()<blockClickUntil&&noteOf(e.target)){e.preventDefault();e.stopImmediatePropagation()}
+ },true);
+ // ── 터치·마우스 입력 (폴더 길게 누르기와 같은 방식)
+ const begin=(target,x,y)=>{if(active||selected)return;const el=noteOf(target);if(!el||isControl(target))return;clearPending();const timer=setTimeout(()=>{if(pending?.timer===timer){pending=null;startDrag(el,x,y)}},LONG);pending={timer,x,y}};
+ document.addEventListener('touchstart',e=>{if(e.touches.length===1){const t=e.touches[0];begin(e.target,t.clientX,t.clientY)}},{capture:true,passive:true});
+ document.addEventListener('touchmove',e=>{const t=e.touches[0];if(!t)return;if(active){if(e.cancelable)e.preventDefault();moveDrag(t.clientX,t.clientY)}else if(pending&&Math.hypot(t.clientX-pending.x,t.clientY-pending.y)>TOL)clearPending()},{capture:true,passive:false});
+ document.addEventListener('touchend',e=>{if(active){const t=e.changedTouches[0];if(t)moveDrag(t.clientX,t.clientY);void finishDrag(false)}else clearPending()},{capture:true});
+ document.addEventListener('touchcancel',()=>{if(active)void finishDrag(true);else clearPending()},{capture:true});
+ document.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||e.button!==0)return;begin(e.target,e.clientX,e.clientY)},true);
+ document.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;if(active){moveDrag(e.clientX,e.clientY);e.preventDefault()}else if(pending&&Math.hypot(e.clientX-pending.x,e.clientY-pending.y)>TOL)clearPending()},true);
+ document.addEventListener('pointerup',e=>{if(e.pointerType!=='touch'){if(active)void finishDrag(false);else clearPending()}},true);
+ document.addEventListener('pointercancel',e=>{if(e.pointerType!=='touch'){if(active)void finishDrag(true);else clearPending()}},true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(active)void finishDrag(true);if(selected)unselect()}});
+})();
+document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder),related=posts.filter(p=>p.folderId===f.id);if(folderChildren(f.id,f.platform).length){alert('하위 폴더가 존재합니다. 하위 폴더를 먼저 이동하거나 삭제해 주세요.');return}if(confirm(`'${f.name}' 폴더와 스크랩 ${related.length}개를 모두 삭제하시겠습니까?`)){for(const p of related)await del('posts',p.id);await del('folders',f.id);route.folder=null;await refresh()}}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){if(confirm('이 스크랩을 삭제하시겠습니까?')){await del('posts',t.dataset.delpost);await refresh()}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;const inModal=Boolean(e.target.closest('#modalRoot'));await put('folders',{id:uid(),platform:route.platform,parentId:route.folder||null,name,description,...style,createdAt:today()});await refresh();if(inModal)closeModal()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);fetch('./guest-data.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(data=>{
  if(!Array.isArray(data.folders)||!Array.isArray(data.posts))throw Error('공개 데이터 형식 오류');
  guestSnapshot={folders:data.folders,posts:data.posts};window.scrapRefresh=refresh;return refresh();
 }).catch(err=>{$('view').innerHTML='<div class="warning">게스트 데이터 불러오기 실패: '+escapeHtml(err.message)+'</div>'});
@@ -459,4 +728,132 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,a,i
 fetch('./guest-fonts.json',{method:'HEAD',cache:'no-store'}).then(r=>{
  if(r.status===404)console.info('게스트 폰트 정보는 아직 게시되지 않았습니다. 관리자 화면에서 폰트 설정 내보내기를 실행하세요.');
 }).catch(()=>{});
-</script><script src="./archive-menu.js?v=menu-platforms-20261123"></script></body></html>
+</script><script src="./archive-menu.js?v=guestsync-20261123"></script>
+
+
+<!-- subfolder-modal-layout-v3 -->
+<style>
+#modalRoot .overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(20, 28, 50, .65);
+}
+
+#modalRoot .dialog {
+  position: relative;
+  width: min(620px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+}
+
+#modalRoot .subfolder-horizontal {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+#modalRoot .subfolder-collapse-trigger {
+  display: none;
+}
+
+#modalRoot .subfolder-row1,
+#modalRoot .subfolder-row2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+#modalRoot .subfolder-row1 .field,
+#modalRoot .subfolder-row2 .field {
+  min-width: 0;
+  width: 100%;
+}
+
+#modalRoot input,
+#modalRoot textarea,
+#modalRoot select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#modalRoot .subfolder-emoji-options {
+  max-width: 100%;
+}
+
+.subfolder-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dfe3ed;
+  border-radius: 9px;
+  background: #fff;
+  color: #344054;
+  font-size: 23px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+#modalRoot .dialog > h2 {
+  padding-right: 42px;
+}
+
+@media (max-width: 550px) {
+  #modalRoot .dialog {
+    padding: 18px;
+  }
+}
+</style>
+
+<!-- cleanup-20261123: 폴더 팝업 정리 (subfolder-modal v3~v6, folder-white-button-match, folder-button-diagnostic 대체) -->
+<script>
+(function () {
+  // 폴더 생성 팝업(하위·상위 공통): 접힌 입력 영역 펼치기, 오른쪽 위 × 닫기 버튼, 이모지 버튼 문구
+  function tidyFolderModal() {
+    const root = document.getElementById('modalRoot');
+    const dialog = root && root.querySelector('.dialog');
+    const form = root && root.querySelector('#folderForm');
+    if (!dialog || !form) return;
+    const details = form.closest('details');
+    if (details) { if (!details.open) details.open = true; if (details.style.display !== 'block') details.style.display = 'block'; }
+    if (!dialog.querySelector('.subfolder-modal-close')) {
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'subfolder-modal-close';
+      close.textContent = '×';
+      close.setAttribute('aria-label', '팝업 닫기');
+      close.setAttribute('data-close', '');
+      dialog.prepend(close);
+    }
+    const label = '전체 이모지 선택';
+    root.querySelectorAll('button').forEach(b => {
+      const t = b.textContent;
+      if (b.classList.contains('subfolder-emoji-toggle') || t.includes('전체 이모지 검색') || t.includes(label)) {
+        if (t.trim() !== label) b.textContent = label;
+        if (b.getAttribute('aria-label') !== label) b.setAttribute('aria-label', label);
+      }
+    });
+  }
+  function init() {
+    const root = document.getElementById('modalRoot');
+    if (root) new MutationObserver(tidyFolderModal).observe(root, { childList: true, subtree: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+
+</body></html>
