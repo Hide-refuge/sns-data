@@ -439,11 +439,15 @@
     '기존 Supabase는',
     '저장 시 업로드',
     'Google Drive 실제',
+    '지금 동기화를 눌러',
   ];
+  // menugrid-20261123: iPad·컴퓨터 화면에서만 줄바꿈하는 문구
+  const wideOnly = new Set(['지금 동기화를 눌러']);
   const formatHints = panel => {
     const targets = panel.querySelectorAll('.hint, p');
     targets.forEach(el => {
-      if (el.dataset.archiveCloudFormatted === 'true') return;
+      // 문구가 나중에 바뀌면(동기화 상태 변경) 다시 줄바꿈 처리
+      if (el.dataset.archiveCloudFormatted === el.textContent) return;
       if (el.children.length) return;
       const original = el.textContent || '';
       const matches = splitBefore.filter(phrase => original.includes(phrase));
@@ -457,15 +461,20 @@
         if (at <= 0) continue;
         parts.splice(idx, 1,
           {text:part.text.slice(0,at).trimEnd(), breakBefore:part.breakBefore},
-          {text:part.text.slice(at).trimStart(), breakBefore:true});
+          {text:part.text.slice(at).trimStart(), breakBefore:true, wide:wideOnly.has(phrase)});
       }
       if (parts.length === 1) return;
       el.replaceChildren();
       parts.forEach(part => {
-        if (part.breakBefore) el.appendChild(document.createElement('br'));
+        if (part.breakBefore) {
+          if (part.wide) el.appendChild(document.createTextNode(' '));
+          const br = document.createElement('br');
+          if (part.wide) br.dataset.wideBreak = '';
+          el.appendChild(br);
+        }
         el.appendChild(document.createTextNode(part.text));
       });
-      el.dataset.archiveCloudFormatted = 'true';
+      el.dataset.archiveCloudFormatted = el.textContent;
     });
   };
   let queued = false;
