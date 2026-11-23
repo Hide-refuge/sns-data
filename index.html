@@ -256,90 +256,24 @@ details > summary::before {
 }
 </style>
 
-<!-- folder-action-button-size-v1 -->
+<!-- cleanup-20261123: 버튼 스타일 통합 (folder-action-button-size-v1 ~ folder-buttons-font14-v1 대체) -->
 <style>
-#openSubfolderModal,
-#addPost {
-  min-height: 0 !important;
-  height: 36px !important;
-  padding: 6px 12px !important;
-  font-size: 13px !important;
-  line-height: 20px !important;
-  box-sizing: border-box !important;
-  white-space: nowrap;
-}
-</style>
-
-
-<!-- folder-action-unified-size-v2 -->
-<style>
-/* 폴더 화면 상단의 버튼 4개 크기 통일 */
-#editFolder,
-#deleteFolder,
-#openSubfolderModal,
-#addPost {
-  height: 36px !important;
-  min-height: 36px !important;
-  max-height: 36px !important;
-
-  padding: 0 12px !important;
-
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  line-height: 1 !important;
-
-  border-radius: 8px !important;
-  box-sizing: border-box !important;
-
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  white-space: nowrap !important;
-  flex-shrink: 0 !important;
-}
-</style>
-
-
-<!-- folder-four-buttons-height-v2 -->
-<style>
-/* 폴더 화면의 네 버튼 높이 통일 */
-header.section-head .actions > button,
-.section-head .actions > button#editFolder,
-.section-head .actions > button#deleteFolder,
-.section-head .actions > button#addPost,
-.section-head .actions > button#openSubfolderModal {
-    height: 42px !important;
-    min-height: 42px !important;
-    max-height: 42px !important;
-    box-sizing: border-box !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    vertical-align: middle !important;
-}
-</style>
-
-<!-- folder-button-height-direct-v3 -->
-
-<!-- folder-buttons-final-height-v4 -->
-<style>
-/* 폴더 화면 상단 버튼 4개 높이 통일 */
-#editFolder,
-#deleteFolder,
-#openSubfolderModal,
-#addPost {
-    height: 42px !important;
-    min-height: 42px !important;
-    max-height: 42px !important;
-    box-sizing: border-box !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    vertical-align: middle !important;
-}
+/* 폴더 화면 상단 버튼 4개: 높이 42px · 글자 14px */
+.section-head .actions > #editFolder,
+.section-head .actions > #deleteFolder,
+.section-head .actions > #openSubfolderModal,
+.section-head .actions > #addPost{
+  height:42px!important;min-height:42px!important;max-height:42px!important;
+  padding:0 12px!important;font-size:14px!important;font-weight:500!important;line-height:1!important;
+  border-radius:8px!important;box-sizing:border-box!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  vertical-align:middle!important;white-space:nowrap!important;flex-shrink:0!important}
+/* 상단 '+ 폴더 생성'·햄버거 버튼: 모든 화면에서 높이 42px */
+header.top .actions #openFolderCreate,
+header.top .actions #archiveMenuToggle{height:42px!important;min-height:42px!important;padding-top:0!important;padding-bottom:0!important;box-sizing:border-box!important}
+header.top .actions #openFolderCreate{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;white-space:nowrap}
+/* 터치 화면: 폴더를 누른 뒤 설명 말풍선이 화면에 남지 않도록 */
+@media (hover:none){.folder:hover .tooltip{display:none}}
 </style>
 
 <!-- top-folder-create-mobile-v1 -->
@@ -434,7 +368,7 @@ function updateHomeResults(){
  root.innerHTML=list.length?list.map(p=>`<article class="note ${homeDisplay}" data-font-post="${escapeHtml(p.id)}"><div class="note-main">${homeDisplay!=='detail'&&(p.images||[]).length?`<div class="note-cover"><img tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="0" src="${escapeHtml(p.images[0])}" alt="대표 이미지"></div>`:''}<div class="note-text"><span class="platform-tag-search">${p.platform==='instagram'?'INSTAGRAM':p.platform==='twitter'?'TWITTER (X)':escapeHtml(String(p.platform||'OTHER').toUpperCase())}</span><h3>${escapeHtml(p.title||'제목 없음')}</h3><div class="chips">${(p.keywords||[]).map(k=>`<span class="chip">#${escapeHtml(k)}</span>`).join('')}<span class="chip">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div><p class="summary">${escapeHtml(p.summary||'')}</p><div class="thumbs">${(p.images||[]).map((img,i)=>`<img class="thumb" tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="${i}" src="${escapeHtml(img)}" alt="첨부 이미지 ${i+1}">`).join('')}</div><div class="meta">추가일 ${formatDate(p.createdAt)} · 이미지 ${(p.images||[]).length}장</div></div></div><div class="note-actions"><a class="btn" href="${escapeHtml(p.url||'#')}" target="_blank" rel="noopener noreferrer">원문 ↗</a><button class="btn" data-home-open="${escapeHtml(p.folderId)}" data-home-platform="${escapeHtml(p.platform)}">폴더 열기</button></div></article>`).join(''):'<div class="empty">검색 결과가 없습니다.</div>';
  queueMicrotask(()=>window.scrapFontApply?.());
 }
-function renderFolder(){const f=folders.find(x=>x.id===route.folder);if(!f){route.folder=null;render();return}const v=$('view');v.innerHTML=`<div class="section-head"><div><h2>${escapeHtml(f.name)}</h2><h3>키워드: ${escapeHtml(f.description||'설명 없음')}</h3></div><div class="actions"><button class="btn" id="editFolder" style="height:42px!important;min-height:42px!important;max-height:42px!important;box-sizing:border-box!important;">폴더 수정</button><button class="btn danger" id="deleteFolder" style="height:42px!important;min-height:42px!important;max-height:42px!important;box-sizing:border-box!important;">폴더 삭제</button><button class="btn primary" id="addPost" style="height:42px!important;min-height:42px!important;max-height:42px!important;box-sizing:border-box!important;">＋ 스크랩 추가</button></div></div><div class="toolbar folder-toolbar"><input id="search" type="search" placeholder="제목·키워드·내용 검색"><select id="sort" aria-label="정렬"><option value="new">추가일 최신순</option><option value="old">추가일 오래된순</option><option value="priority">중요도 높은순</option><option value="name">가나다순</option></select><select id="display" aria-label="표시 방식"><option value="detail">상세형</option><option value="compact">간략형</option><option value="titleonly">제목형</option></select><div class="folder-view-controls"><span class="pill" id="postCount"></span><button type="button" class="btn folder-layout-toggle" id="folderLayoutToggle" aria-label="폴더 스크랩 레이아웃 전환" title="리스트뷰와 그리드뷰 전환">▦ 그리드뷰로 전환</button></div></div><div class="section-head"><h3>하위 폴더</h3></div><div class="subfolder-area"><div class="subfolder-list">${folderCards(f.id,f.platform)}</div></div><div class="section-head"><h3>현재 폴더의 스크랩</h3></div><div id="postList"></div>`;initFolderStyleControls(v);const emoji=v.querySelector('.subfolder-horizontal .folder-emoji-options'),toggle=v.querySelector('.subfolder-emoji-toggle');if(emoji&&toggle){toggle.onclick=()=>{emoji.hidden=!emoji.hidden;toggle.setAttribute('aria-expanded',String(!emoji.hidden))}}updatePostList()}
+function renderFolder(){const f=folders.find(x=>x.id===route.folder);if(!f){route.folder=null;render();return}const v=$('view');v.innerHTML=`<div class="section-head"><div><h2>${escapeHtml(f.name)}</h2><h3>키워드: ${escapeHtml(f.description||'설명 없음')}</h3></div><div class="actions"><button class="btn" id="editFolder">폴더 수정</button><button class="btn danger" id="deleteFolder">폴더 삭제</button><button class="btn primary" type="button" id="openSubfolderModal">+ 하위 폴더 생성</button><button class="btn primary" id="addPost">＋ 스크랩 추가</button></div></div><div class="toolbar folder-toolbar"><input id="search" type="search" placeholder="제목·키워드·내용 검색"><select id="sort" aria-label="정렬"><option value="new">추가일 최신순</option><option value="old">추가일 오래된순</option><option value="priority">중요도 높은순</option><option value="name">가나다순</option></select><select id="display" aria-label="표시 방식"><option value="detail">상세형</option><option value="compact">간략형</option><option value="titleonly">제목형</option></select><div class="folder-view-controls"><span class="pill" id="postCount"></span><button type="button" class="btn folder-layout-toggle" id="folderLayoutToggle" aria-label="폴더 스크랩 레이아웃 전환" title="리스트뷰와 그리드뷰 전환">▦ 그리드뷰로 전환</button></div></div><div class="section-head"><h3>하위 폴더</h3></div><div class="subfolder-area"><div class="subfolder-list">${folderCards(f.id,f.platform)}</div></div><div class="section-head"><h3>현재 폴더의 스크랩</h3></div><div id="postList"></div>`;initFolderStyleControls(v);const emoji=v.querySelector('.subfolder-horizontal .folder-emoji-options'),toggle=v.querySelector('.subfolder-emoji-toggle');if(emoji&&toggle){toggle.onclick=()=>{emoji.hidden=!emoji.hidden;toggle.setAttribute('aria-expanded',String(!emoji.hidden))}}updatePostList()}
 
 // 표시 방식에 관계없이 저장된 작성자 정보를 직접 확인하여 버튼을 생성합니다.
 function folderAuthorButtons(p,mode){
@@ -730,476 +664,43 @@ document.addEventListener('click',async e=>{const t=e.target.closest('button,a,i
 }
 </style>
 
+<!-- cleanup-20261123: 폴더 팝업 정리 (subfolder-modal v3~v6, folder-white-button-match, folder-button-diagnostic 대체) -->
 <script>
 (function () {
-  function closeSubfolderOverlay(event) {
-    if (event.target.matches('#modalRoot .overlay')) {
-      if (typeof closeModal === 'function') closeModal();
-    }
-
-    if (event.target.closest('.subfolder-modal-close')) {
-      if (typeof closeModal === 'function') closeModal();
-    }
-  }
-
-  document.addEventListener('click', closeSubfolderOverlay);
-
-  document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-      const root = document.querySelector('#modalRoot');
-      if (root && root.querySelector('.overlay')) {
-        if (typeof closeModal === 'function') closeModal();
-      }
-    }
-  });
-
-  function adjustSubfolderModal() {
-    const root = document.querySelector('#modalRoot');
-    if (!root) return;
-
-    const dialog = root.querySelector('.dialog');
-    const form = root.querySelector('#folderForm');
-
+  // 폴더 생성 팝업(하위·상위 공통): 접힌 입력 영역 펼치기, 오른쪽 위 × 닫기 버튼, 이모지 버튼 문구
+  function tidyFolderModal() {
+    const root = document.getElementById('modalRoot');
+    const dialog = root && root.querySelector('.dialog');
+    const form = root && root.querySelector('#folderForm');
     if (!dialog || !form) return;
-
     const details = form.closest('details');
-
-    if (details) {
-      details.open = true;
-      details.style.display = 'block';
-    }
-
+    if (details) { if (!details.open) details.open = true; if (details.style.display !== 'block') details.style.display = 'block'; }
     if (!dialog.querySelector('.subfolder-modal-close')) {
       const close = document.createElement('button');
       close.type = 'button';
       close.className = 'subfolder-modal-close';
       close.textContent = '×';
       close.setAttribute('aria-label', '팝업 닫기');
+      close.setAttribute('data-close', '');
       dialog.prepend(close);
     }
-
-    const emojiButton = root.querySelector('.subfolder-emoji-toggle');
-
-    if (emojiButton) {
-      emojiButton.textContent = '전체 이모지 선택';
-    }
-  }
-
-  const observer = new MutationObserver(adjustSubfolderModal);
-
-  function initialize() {
-    const root = document.querySelector('#modalRoot');
-    if (root) {
-      observer.observe(root, { childList: true, subtree: true });
-    }
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.id = 'openSubfolderModal';
-    button.className = 'btn primary';
-    button.textContent = '+ 하위 폴더 생성';
-
-    const placeButton = () => {
-      const edit = [...document.querySelectorAll('button')]
-        .find(el => el.textContent.trim() === '폴더 수정');
-
-      if (!edit) return;
-
-      const actions = edit.parentElement;
-      if (!actions) return;
-
-      if (!document.getElementById('openSubfolderModal')) {
-        actions.prepend(button);
+    const label = '전체 이모지 선택';
+    root.querySelectorAll('button').forEach(b => {
+      const t = b.textContent;
+      if (b.classList.contains('subfolder-emoji-toggle') || t.includes('전체 이모지 검색') || t.includes(label)) {
+        if (t.trim() !== label) b.textContent = label;
+        if (b.getAttribute('aria-label') !== label) b.setAttribute('aria-label', label);
       }
-    };
-
-    placeButton();
-
-    const pageObserver = new MutationObserver(placeButton);
-    pageObserver.observe(document.body, {
-      childList: true,
-      subtree: true
     });
   }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-  } else {
-    initialize();
+  function init() {
+    const root = document.getElementById('modalRoot');
+    if (root) new MutationObserver(tidyFolderModal).observe(root, { childList: true, subtree: true });
   }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 
-
-<!-- subfolder-modal-adjust-v4 -->
-<script>
-(function () {
-  function adjustSubfolderUI() {
-    // 1. 버튼 순서 변경
-    const addButton = document.getElementById('openSubfolderModal');
-
-    if (addButton) {
-      const buttons = [...document.querySelectorAll('button')];
-
-      const deleteButton = buttons.find(
-        b => b.textContent.trim() === '폴더 삭제'
-      );
-
-      const scrapButton = buttons.find(
-        b => b.textContent.trim() === '+ 스크랩 추가'
-      );
-
-      if (
-        deleteButton &&
-        scrapButton &&
-        deleteButton.parentElement === scrapButton.parentElement &&
-        addButton.nextElementSibling !== scrapButton
-      ) {
-        scrapButton.before(addButton);
-      }
-    }
-
-    // 2. 팝업 내부 이모지 선택 버튼 문구 변경
-    const modal = document.querySelector('#modalRoot');
-
-    if (!modal || !modal.querySelector('#folderForm')) return;
-
-    const emojiButtons = [
-      ...modal.querySelectorAll('button')
-    ];
-
-    const emojiButton = emojiButtons.find(b =>
-      b.textContent.includes('전체 이모지 검색') ||
-      b.textContent.includes('전체 이모지 선택')
-    );
-
-    if (emojiButton) {
-      const desired = '전체 이모지 선택';
-
-      if (emojiButton.textContent.trim() !== desired) {
-        emojiButton.textContent = desired;
-      }
-
-      emojiButton.setAttribute(
-        'aria-label',
-        '전체 이모지 선택'
-      );
-    }
-  }
-
-  let scheduled = false;
-
-  function scheduleAdjustment() {
-    if (scheduled) return;
-
-    scheduled = true;
-
-    requestAnimationFrame(() => {
-      scheduled = false;
-      adjustSubfolderUI();
-    });
-  }
-
-  function initialize() {
-    scheduleAdjustment();
-
-    const observer = new MutationObserver(scheduleAdjustment);
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-  } else {
-    initialize();
-  }
-})();
-</script>
-
-
-<!-- subfolder-button-order-v5 -->
-<script>
-(function () {
-  function arrangeButtons() {
-    const addButton =
-      document.getElementById('openSubfolderModal');
-
-    if (!addButton) return;
-
-    const buttons = [
-      ...document.querySelectorAll('button')
-    ];
-
-    const findButton = (label) =>
-      buttons.find(b => b.textContent.trim() === label);
-
-    const editButton = findButton('폴더 수정');
-    const deleteButton = findButton('폴더 삭제');
-    const scrapButton = findButton('+ 스크랩 추가');
-
-    if (!editButton || !deleteButton || !scrapButton) {
-      return;
-    }
-
-    const target = scrapButton.parentElement;
-
-    if (!target) return;
-
-    // 기존 버튼 스타일을 유지하며 순서만 변경
-    const desired = [
-      editButton,
-      deleteButton,
-      addButton,
-      scrapButton
-    ];
-
-    const alreadyOrdered =
-      desired.every((button, index) =>
-        button.parentElement === target &&
-        (
-          index === 0 ||
-          desired[index - 1].nextElementSibling === button
-        )
-      );
-
-    if (alreadyOrdered) return;
-
-    for (const button of desired) {
-      target.appendChild(button);
-    }
-  }
-
-  let scheduled = false;
-
-  function scheduleArrange() {
-    if (scheduled) return;
-
-    scheduled = true;
-
-    requestAnimationFrame(() => {
-      scheduled = false;
-      arrangeButtons();
-    });
-  }
-
-  function initialize() {
-    scheduleArrange();
-
-    const observer = new MutationObserver(scheduleArrange);
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-  } else {
-    initialize();
-  }
-})();
-</script>
-
-
-<!-- subfolder-button-order-v6 -->
-<script>
-(function () {
-  function arrangeFolderButtons() {
-    const edit = document.getElementById('editFolder');
-    const remove = document.getElementById('deleteFolder');
-    const subfolder = document.getElementById('openSubfolderModal');
-    const scrap = document.getElementById('addPost');
-
-    if (!edit || !remove || !subfolder || !scrap) return;
-
-    const container = scrap.parentElement;
-    if (!container) return;
-
-    const order = [edit, remove, subfolder, scrap];
-
-    const correct = order.every((button, index) =>
-      button.parentElement === container &&
-      (index === 0 || order[index - 1].nextElementSibling === button)
-    );
-
-    if (correct) return;
-
-    order.forEach(button => container.appendChild(button));
-  }
-
-  let scheduled = false;
-
-  function scheduleUpdate() {
-    if (scheduled) return;
-    scheduled = true;
-
-    requestAnimationFrame(() => {
-      scheduled = false;
-      arrangeFolderButtons();
-    });
-  }
-
-  function initialize() {
-    scheduleUpdate();
-
-    const observer = new MutationObserver(scheduleUpdate);
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-  } else {
-    initialize();
-  }
-})();
-</script>
-
-
-<!-- folder-white-button-match-blue-v1 -->
-<script>
-(function () {
-  function matchButtonHeight() {
-    const blue = document.getElementById('addPost');
-    const whiteButtons = [
-      document.getElementById('editFolder'),
-      document.getElementById('deleteFolder')
-    ];
-
-    if (!blue || whiteButtons.some(button => !button)) return;
-
-    const height = blue.getBoundingClientRect().height;
-    if (!height) return;
-
-    whiteButtons.forEach(button => {
-      button.style.setProperty('height', height + 'px', 'important');
-      button.style.setProperty('min-height', height + 'px', 'important');
-      button.style.setProperty('max-height', height + 'px', 'important');
-      button.style.setProperty('box-sizing', 'border-box', 'important');
-    });
-  }
-
-  function update() {
-    requestAnimationFrame(matchButtonHeight);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', update);
-  } else {
-    update();
-  }
-
-  window.addEventListener('resize', update);
-})();
-</script>
-
-
-<!-- folder-button-diagnostic-v1 -->
-<script>
-(function () {
-  const ids = [
-    ["editFolder", "폴더 수정"],
-    ["deleteFolder", "폴더 삭제"],
-    ["openSubfolderModal", "하위 폴더 생성"],
-    ["addPost", "스크랩 추가"]
-  ];
-
-  const panel = document.createElement("div");
-  panel.id = "folderButtonDiagnostic";
-  panel.style.cssText = [
-    "position:fixed",
-    "left:12px",
-    "bottom:12px",
-    "z-index:2147483647",
-    "background:#ffffff",
-    "color:#222222",
-    "border:2px solid #465cc7",
-    "border-radius:12px",
-    "padding:14px",
-    "font:13px/1.6 sans-serif",
-    "box-shadow:0 4px 20px #0003",
-    "max-width:calc(100vw - 24px)",
-    "max-height:50vh",
-    "overflow:auto"
-  ].join(";");
-
-  panel.innerHTML =
-    '<div style="display:flex;justify-content:space-between;gap:20px">' +
-    '<strong>버튼 크기 진단</strong>' +
-    '<button type="button" id="folderDiagClose">닫기</button>' +
-    '</div><div id="folderDiagResult"></div>' +
-    '<button type="button" id="folderDiagRefresh">다시 측정</button>';
-
-  document.body.appendChild(panel);
-
-  function measure() {
-    const lines = ids.map(([id, label]) => {
-      const el = document.getElementById(id);
-
-      if (!el) {
-        return label + ": 현재 화면에 없음";
-      }
-
-      const rect = el.getBoundingClientRect();
-      const css = getComputedStyle(el);
-
-      return label +
-        ": 실제 " + rect.height.toFixed(1) + "px" +
-        " / CSS " + css.height +
-        " / 글자 " + css.fontSize +
-        " / 상하 여백 " + css.paddingTop +
-        ", " + css.paddingBottom;
-    });
-
-    document.getElementById("folderDiagResult")
-      .textContent = lines.join("\n");
-    document.getElementById("folderDiagResult")
-      .style.whiteSpace = "pre-wrap";
-  }
-
-  document.getElementById("folderDiagClose")
-    .addEventListener("click", () => panel.remove());
-
-  document.getElementById("folderDiagRefresh")
-    .addEventListener("click", measure);
-
-  document.addEventListener("click", () => {
-    if (panel.isConnected) {
-      requestAnimationFrame(measure);
-    }
-  });
-
-  measure();
-})();
-</script>
-
-
-<!-- folder-buttons-font14-v1 -->
-<style>
-/* 폴더 화면 상단의 4개 버튼만 적용 */
-.section-head .actions > button#editFolder,
-.section-head .actions > button#deleteFolder,
-.section-head .actions > button#openSubfolderModal,
-.section-head .actions > button#addPost {
-    height: 42px !important;
-    min-height: 42px !important;
-    max-height: 42px !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    line-height: 1 !important;
-    box-sizing: border-box !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    white-space: nowrap !important;
-}
-</style>
 
 </body></html>
