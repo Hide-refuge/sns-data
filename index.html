@@ -255,7 +255,38 @@ details > summary::before {
   }
 }
 </style>
-</head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="./sync-config.js"></script><script src="./sync.js?v=cloud-linebreak-20261122-01"></script><script>
+
+<!-- cleanup-20261123: 버튼 스타일 통합 (folder-action-button-size-v1 ~ folder-buttons-font14-v1 대체) -->
+<style>
+/* 폴더 화면 상단 버튼 4개: 높이 42px · 글자 14px */
+.section-head .actions > #editFolder,
+.section-head .actions > #deleteFolder,
+.section-head .actions > #openSubfolderModal,
+.section-head .actions > #addPost{
+  height:42px!important;min-height:42px!important;max-height:42px!important;
+  padding:0 12px!important;font-size:14px!important;font-weight:500!important;line-height:1!important;
+  border-radius:8px!important;box-sizing:border-box!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  vertical-align:middle!important;white-space:nowrap!important;flex-shrink:0!important}
+/* 상단 '+ 폴더 생성'·햄버거 버튼: 모든 화면에서 높이 42px */
+header.top .actions #openFolderCreate,
+header.top .actions #archiveMenuToggle{height:42px!important;min-height:42px!important;padding-top:0!important;padding-bottom:0!important;box-sizing:border-box!important}
+header.top .actions #openFolderCreate{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;white-space:nowrap}
+/* 터치 화면: 폴더를 누른 뒤 설명 말풍선이 화면에 남지 않도록 */
+@media (hover:none){.folder:hover .tooltip{display:none}}
+</style>
+
+<!-- top-folder-create-mobile-v1 -->
+<style>
+@media (max-width:760px){
+  header.top .actions{width:100%;display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:10px}
+  header.top .actions #openFolderCreate,
+  header.top .actions #archiveMenuToggle{height:42px!important;min-height:42px!important;padding-top:0!important;padding-bottom:0!important;box-sizing:border-box!important}
+  header.top .actions #openFolderCreate{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;padding-left:16px;padding-right:16px;white-space:nowrap}
+  header.top .actions #archiveMenuToggle{margin-left:auto}
+}
+</style>
+</head><body><main class="app"><header class="top"><div><div class="eyebrow" id="archiveEyebrow">PERSONAL ARCHIVE DATABASE</div><h1 id="archiveTitle">Curated by Hide</h1><div class="muted" id="archivePeriod" aria-live="polite">스크랩 기간 계산 중…</div></div><div class="actions"><button class="btn" id="exportBtn">Backup_Export</button><button class="btn" id="importBtn">Backup_Upload</button><input class="hidden" id="importFile" type="file" accept=".json,application/json"></div></header><nav id="crumb" class="crumb"></nav><div id="view"></div><section id="syncPanel" class="panel" style="margin-top:20px"><strong>☁ 클라우드 동기화</strong><p class="hint" id="syncStatus">연결 준비 중…</p><div id="syncControls"></div><div class="hint" id="syncModeInfo" aria-live="polite">동기화 설정 확인 중…</div><div class="hint" id="syncUsageInfo" aria-live="polite">오늘 조회 데이터 계산 중…</div><p class="hint">표시 용량은 이 브라우저에서 수신한 데이터의 추정값입니다. Supabase 공식 Egress·다른 기기·네트워크 부가 전송량은 포함되지 않습니다.</p></section><footer class="footer">로그아웃 상태에서는 현재 브라우저의 IndexedDB에 저장됩니다. 로그인 상태에서는 Supabase에 저장됩니다. 중요한 자료는 정기적으로 백업하세요.</footer></main><div id="modalRoot"></div><!-- security-20261123: 사용하지 않는 Supabase 외부 스크립트 제거 --><script src="./sync-config.js"></script><script src="./sync.js?v=cloud-linebreak-20261122-01"></script><script>
 'use strict';
 let igSearchQuery='',igSearchActive=false,igAdvanced={folder:'',year:'',keyword:''},igSearchLayout='list';
 const DB_NAME='personal-scrap-hub-v1', DB_VERSION=1;let db,route={platform:null,folder:null},folders=[],posts=[];const $=id=>document.getElementById(id);const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const uid=()=>crypto.randomUUID?.()||Date.now()+'-'+Math.random().toString(36).slice(2);const today=()=>new Date().toISOString();const formatDate=s=>s?new Date(s).toLocaleDateString('ko-KR'):'';window.scrapFontPosts=()=>posts;window.scrapFontFolders=()=>folders;window.scrapFontRoute=()=>route;const platforms={instagram:{name:'Instagram',glyph:'◎'},twitter:{name:'Twitter (X)',glyph:'𝕏'}};
@@ -305,7 +336,7 @@ function folderOptionHtml(platform,selected,exclude){const disallowed=exclude?ne
 function folderCards(parentId,platform){const fs=folderChildren(parentId,platform);return fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>하위 폴더 ${folderChildren(f.id,platform).length}개 · 스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">하위 폴더가 없습니다.</div>'}
 function subfolderForm(){const color='#e3e7f0',icon='📁';return `<section class="panel subfolder-horizontal"><details class="subfolder-collapse"><summary class="subfolder-collapse-trigger">＋ 하위 폴더 <span class="subfolder-collapse-state" aria-hidden="true"></span></summary><form id="folderForm"><div class="subfolder-row1"><div class="field"><label for="folderName">폴더명</label><input id="folderName" maxlength="70" required></div><div class="field"><label for="folderDesc">설명</label><input id="folderDesc"></div></div><div class="subfolder-row2"><div class="field subfolder-icon-field"><label>폴더 아이콘 (이모지 선택)</label><div class="folder-emoji-options" hidden>${FOLDER_EMOJIS.map(e=>`<button type="button" class="btn ${e===icon?'selected':''}" data-emoji="${e}" aria-label="${e} 선택">${e}</button>`).join('')}</div><input type="hidden" name="icon" value="${icon}"></div><div class="field subfolder-color-field"><label>폴더 테두리 색상 (색상표 또는 HEX 코드)</label><div class="folder-color-picker"><input type="color" data-color-picker value="${color}" aria-label="테두리 색상 선택"><input type="text" name="color" data-color-text maxlength="7" value="${color}" placeholder="#000000" aria-label="HEX 색상 코드"></div></div><div class="subfolder-action"><button class="btn primary subfolder-create" type="submit">하위 폴더 생성</button></div></div></form></details></section>`}
 
-function render(){queueMicrotask(()=>window.scrapFontApply?.());const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3>폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="split"><div>${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 오른쪽에서 만들어 보세요.</div>'}</div><aside class="panel"><h3>＋ 새 폴더</h3><form id="folderForm"><div class="field"><label for="folderName">폴더명 / 정보 종류</label><input id="folderName" maxlength="70" required placeholder="예: 디자인 레퍼런스"></div>${folderStyleFields()}<div class="field"><label for="folderDesc">설정 정보 메모</label><textarea id="folderDesc" placeholder="이 폴더에 저장할 자료의 기준"></textarea></div><button class="btn primary" type="submit">폴더 생성</button></form><p class="hint">저장 수량은 스크랩 추가·삭제 시 자동 계산됩니다.</p></aside></div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
+function render(){queueMicrotask(()=>window.scrapFontApply?.());queueMicrotask(syncFolderCreateButton);const v=$('view'),c=$('crumb');c.innerHTML=`<button data-nav="home">홈</button>${route.platform?`<span>›</span><button data-nav="platform">${escapeHtml(platforms[route.platform].name)}</button>`:''}${route.folder?folderAncestors(route.folder).map((f,i,a)=>`<span>›</span>${i===a.length-1?`<strong>${escapeHtml(f.name)}</strong>`:`<button data-folder="${escapeHtml(f.id)}">${escapeHtml(f.name)}</button>`}`).join(''):''}`;if(!route.platform){v.innerHTML=`<div class="home-search"><input id="homeSearch" type="search" aria-label="전체 스크랩 검색" placeholder="전체 스크랩 검색 · 제목, 내용, 키워드" value="${escapeHtml(homeQuery)}"></div><div id="homeSearchBody"></div>`;renderHomeSearchBody();return}if(!route.folder){const fs=folderChildren(null,route.platform);v.innerHTML=`${route.platform==='instagram'?instagramSearchBar():''}<div class="section-head"><div><h2>${escapeHtml(platforms[route.platform].name)} 폴더</h2><h3>폴더에 마우스를 올리거나 키보드로 선택하면 설명을 볼 수 있습니다.</h3></div></div><div class="folder-list-wrap">${fs.length?`<div class="folders">${fs.map(f=>`<button class="folder" data-folder="${escapeHtml(f.id)}" style="border-color:${safeFolderColor(f.color)}"><span class="foldericon">${escapeHtml(f.icon||'📁')}</span><strong>${escapeHtml(f.name)}</strong><small>스크랩 ${posts.filter(p=>p.folderId===f.id).length}개</small><span class="tooltip">${escapeHtml(f.description||'설명 없음')}</span></button>`).join('')}</div>`:'<div class="empty">아직 폴더가 없습니다. 상단의 + 폴더 생성 버튼으로 만들어 보세요.</div>'}</div>${route.platform==='instagram'?'</div>':''}`;if(route.platform==='instagram'){initFolderStyleControls(v);if(igSearchActive)renderInstagramResults()}return}renderFolder()}
 
 const FOLDER_EMOJIS=['📁','📂','⭐','❤️','🎨','📷','🎬','🎵','📚','💡','📝','🌸','🌿','🌙','✨','🧩','🛍️','🍀','🎮','🏷️','🖼️','🧵','🪄','🔖'];
 function safeFolderColor(c){return /^#[0-9a-fA-F]{6}$/.test(String(c||''))?c:'#e3e7f0'}
@@ -337,7 +368,7 @@ function updateHomeResults(){
  root.innerHTML=list.length?list.map(p=>`<article class="note ${homeDisplay}" data-font-post="${escapeHtml(p.id)}"><div class="note-main">${homeDisplay!=='detail'&&(p.images||[]).length?`<div class="note-cover"><img tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="0" src="${escapeHtml(p.images[0])}" alt="대표 이미지"></div>`:''}<div class="note-text"><span class="platform-tag-search">${p.platform==='instagram'?'INSTAGRAM':p.platform==='twitter'?'TWITTER (X)':escapeHtml(String(p.platform||'OTHER').toUpperCase())}</span><h3>${escapeHtml(p.title||'제목 없음')}</h3><div class="chips">${(p.keywords||[]).map(k=>`<span class="chip">#${escapeHtml(k)}</span>`).join('')}<span class="chip">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div><p class="summary">${escapeHtml(p.summary||'')}</p><div class="thumbs">${(p.images||[]).map((img,i)=>`<img class="thumb" tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="${i}" src="${escapeHtml(img)}" alt="첨부 이미지 ${i+1}">`).join('')}</div><div class="meta">추가일 ${formatDate(p.createdAt)} · 이미지 ${(p.images||[]).length}장</div></div></div><div class="note-actions"><a class="btn" href="${escapeHtml(p.url||'#')}" target="_blank" rel="noopener noreferrer">원문 ↗</a><button class="btn" data-home-open="${escapeHtml(p.folderId)}" data-home-platform="${escapeHtml(p.platform)}">폴더 열기</button></div></article>`).join(''):'<div class="empty">검색 결과가 없습니다.</div>';
  queueMicrotask(()=>window.scrapFontApply?.());
 }
-function renderFolder(){const f=folders.find(x=>x.id===route.folder);if(!f){route.folder=null;render();return}const v=$('view');v.innerHTML=`<div class="section-head"><div><h2>${escapeHtml(f.name)}</h2><h3>키워드: ${escapeHtml(f.description||'설명 없음')}</h3></div><div class="actions"><button class="btn" id="editFolder">폴더 수정</button><button class="btn danger" id="deleteFolder">폴더 삭제</button><button class="btn primary" id="addPost">＋ 스크랩 추가</button></div></div><div class="toolbar folder-toolbar"><input id="search" type="search" placeholder="제목·키워드·내용 검색"><select id="sort" aria-label="정렬"><option value="new">추가일 최신순</option><option value="old">추가일 오래된순</option><option value="priority">중요도 높은순</option><option value="name">가나다순</option></select><select id="display" aria-label="표시 방식"><option value="detail">상세형</option><option value="compact">간략형</option><option value="titleonly">제목형</option></select><div class="folder-view-controls"><span class="pill" id="postCount"></span><button type="button" class="btn folder-layout-toggle" id="folderLayoutToggle" aria-label="폴더 스크랩 레이아웃 전환" title="리스트뷰와 그리드뷰 전환">▦ 그리드뷰로 전환</button></div></div><div class="section-head"><h3>하위 폴더</h3></div><div class="subfolder-area">${subfolderForm()}<div class="subfolder-list">${folderCards(f.id,f.platform)}</div></div><div class="section-head"><h3>현재 폴더의 스크랩</h3></div><div id="postList"></div>`;initFolderStyleControls(v);const emoji=v.querySelector('.subfolder-horizontal .folder-emoji-options'),toggle=v.querySelector('.subfolder-emoji-toggle');if(emoji&&toggle){toggle.onclick=()=>{emoji.hidden=!emoji.hidden;toggle.setAttribute('aria-expanded',String(!emoji.hidden))}}updatePostList()}
+function renderFolder(){const f=folders.find(x=>x.id===route.folder);if(!f){route.folder=null;render();return}const v=$('view');v.innerHTML=`<div class="section-head"><div><h2>${escapeHtml(f.name)}</h2><h3>키워드: ${escapeHtml(f.description||'설명 없음')}</h3></div><div class="actions"><button class="btn" id="editFolder">폴더 수정</button><button class="btn danger" id="deleteFolder">폴더 삭제</button><button class="btn primary" type="button" id="openSubfolderModal">+ 하위 폴더 생성</button><button class="btn primary" id="addPost">＋ 스크랩 추가</button></div></div><div class="toolbar folder-toolbar"><input id="search" type="search" placeholder="제목·키워드·내용 검색"><select id="sort" aria-label="정렬"><option value="new">추가일 최신순</option><option value="old">추가일 오래된순</option><option value="priority">중요도 높은순</option><option value="name">가나다순</option></select><select id="display" aria-label="표시 방식"><option value="detail">상세형</option><option value="compact">간략형</option><option value="titleonly">제목형</option></select><div class="folder-view-controls"><span class="pill" id="postCount"></span><button type="button" class="btn folder-layout-toggle" id="folderLayoutToggle" aria-label="폴더 스크랩 레이아웃 전환" title="리스트뷰와 그리드뷰 전환">▦ 그리드뷰로 전환</button></div></div><div class="section-head"><h3>하위 폴더</h3></div><div class="subfolder-area"><div class="subfolder-list">${folderCards(f.id,f.platform)}</div></div><div class="section-head"><h3>현재 폴더의 스크랩</h3></div><div id="postList"></div>`;initFolderStyleControls(v);const emoji=v.querySelector('.subfolder-horizontal .folder-emoji-options'),toggle=v.querySelector('.subfolder-emoji-toggle');if(emoji&&toggle){toggle.onclick=()=>{emoji.hidden=!emoji.hidden;toggle.setAttribute('aria-expanded',String(!emoji.hidden))}}updatePostList()}
 
 // 표시 방식에 관계없이 저장된 작성자 정보를 직접 확인하여 버튼을 생성합니다.
 function folderAuthorButtons(p,mode){
@@ -352,7 +383,50 @@ function folderAuthorButtons(p,mode){
 }
 
 function updatePostList(){queueMicrotask(()=>window.scrapFontApply?.());if(!route.folder||!$('postList'))return;const q=$('search').value.trim().toLocaleLowerCase(),sort=$('sort').value,mode=$('display').value;let list=posts.filter(p=>p.folderId===route.folder&&[p.title,p.summary,(p.keywords||[]).join(' ')].join(' ').toLocaleLowerCase().includes(q));list.sort((a,b)=>sort==='name'?a.title.localeCompare(b.title,'ko'):sort==='priority'?(b.priority||0)-(a.priority||0)||b.createdAt.localeCompare(a.createdAt):sort==='old'?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt));$('postCount').textContent=`${list.length}개`; $('postList').classList.toggle('folder-post-grid',folderLayout==='grid');const toggle=$('folderLayoutToggle');if(toggle){toggle.textContent=folderLayout==='list'?'▦ 그리드뷰로 전환':'☰ 리스트뷰로 전환';toggle.setAttribute('aria-label',folderLayout==='list'?'그리드뷰로 전환':'리스트뷰로 전환');toggle.setAttribute('aria-pressed',String(folderLayout==='grid'));} $('postList').innerHTML=list.length?list.map(p=>`<article class="note ${mode}" data-font-post="${escapeHtml(p.id)}"><div class="note-main">${mode!=='detail'&&(p.images||[]).length?`<div class="note-cover"><img tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="0" src="${p.images[0]}" alt="${escapeHtml(p.title)} 대표 이미지 확대">${p.images.length>1?`<span class="cover-count">+${p.images.length-1}</span>`:''}</div>`:''}<div class="note-text"><h3>${escapeHtml(p.title)}</h3><div class="chips">${(p.keywords||[]).map(k=>`<span class="chip">#${escapeHtml(k)}</span>`).join('')}<span class="chip" title="중요도">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div><p class="summary">${escapeHtml(p.summary)}</p><div class="thumbs">${(p.images||[]).map((img,i)=>`<img class="thumb" tabindex="0" role="button" data-image="${escapeHtml(p.id)}" data-index="${i}" src="${img}" alt="첨부 이미지 ${i+1}">`).join('')}</div><div class="meta">추가일 ${formatDate(p.createdAt)} · 이미지 ${(p.images||[]).length}장</div>${mode==='titleonly'?`<div class="title-priority"><span class="chip" title="중요도">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div>`:''}</div></div><div class="note-actions"><a class="btn" href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer">원문 ↗</a>${folderAuthorButtons(p,mode)}${mode==='detail'?`<button class="btn edit-action" data-editpost="${escapeHtml(p.id)}">수정</button><button class="btn danger delete-action" data-delpost="${escapeHtml(p.id)}">삭제</button>`:''}</div></article>`).join(''):'<div class="empty">검색 결과가 없거나 아직 등록된 스크랩이 없습니다.</div>'}
-function closeModal(){$('modalRoot').innerHTML=''}function modal(content){$('modalRoot').innerHTML=`<div class="overlay" id="overlay"><div class="dialog" role="dialog" aria-modal="true">${content}</div></div>`}
+function closeModal(){$('modalRoot').innerHTML=''}
+// top-folder-create-modal-v1: 상위 폴더 생성을 상단 버튼 + 중앙 팝업으로 전환
+function syncFolderCreateButton(){
+  const show=Boolean(route.platform&&!route.folder);
+  let btn=document.getElementById('openFolderCreate');
+  if(!show){if(btn)btn.remove();return}
+  const actions=document.querySelector('header.top .actions');
+  if(!actions)return;
+  if(!btn){btn=document.createElement('button');btn.type='button';btn.id='openFolderCreate';btn.className='btn primary';btn.textContent='+ 폴더 생성'}
+  const toggle=document.getElementById('archiveMenuToggle');
+  if(toggle&&toggle.parentElement===actions){if(btn.nextElementSibling!==toggle)actions.insertBefore(btn,toggle)}
+  else if(btn.parentElement!==actions)actions.appendChild(btn);
+}
+function openFolderCreateModal(){
+  if(!route.platform||route.folder)return;
+  modal(`<h2>새 폴더 생성</h2><form id="folderForm"><div class="field"><label for="folderName">폴더명 / 정보 종류</label><input id="folderName" maxlength="70" required placeholder="예: 디자인 레퍼런스"></div>${folderStyleFields()}<div class="field"><label for="folderDesc">설정 정보 메모</label><textarea id="folderDesc" placeholder="이 폴더에 저장할 자료의 기준"></textarea></div><div class="actions" style="justify-content:flex-end"><button class="btn" type="button" data-close>취소</button><button class="btn primary" type="submit">폴더 생성</button></div></form>`);
+  initFolderStyleControls($('modalRoot'));
+  setTimeout(()=>$('folderName')?.focus(),0);
+}
+document.addEventListener('click',e=>{if(e.target.closest('#openFolderCreate'))openFolderCreateModal()});
+// subfolder-modal-button-v1
+function openSubfolderModal(){
+  modal('<h2>하위 폴더 생성</h2>' + subfolderForm());
+
+  const form = document.querySelector('#modalRoot #folderForm');
+  if (form) {
+    form.addEventListener('submit', () => {
+      setTimeout(() => {
+        const root = document.querySelector('#modalRoot');
+        if (root && root.querySelector('#folderForm')) {
+          closeModal();
+        }
+      }, 100);
+    });
+  }
+}
+
+document.addEventListener('click', (event) => {
+  if (event.target.closest('#openSubfolderModal')) {
+    openSubfolderModal();
+  }
+});
+
+function modal(content){$('modalRoot').innerHTML=`<div class="overlay" id="overlay"><div class="dialog" role="dialog" aria-modal="true">${content}</div></div>`}
 function folderModal(f){modal(`<h2>폴더 수정</h2><form id="folderEditForm"><div class="field"><label>폴더명</label><input name="name" required maxlength="70" value="${escapeHtml(f.name)}"></div><div class="field"><label>설명</label><textarea name="description">${escapeHtml(f.description)}</textarea></div>${folderStyleFields(f)}<div class="field"><label>상위 폴더</label><select name="parentId"><option value="">최상위 폴더</option>${folderOptionHtml(f.platform,folderParent(f),f.id)}</select></div><div class="actions"><button class="btn primary" type="submit">저장</button><button class="btn" type="button" data-close>취소</button></div></form>`);$('folderEditForm').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.target);const style=readFolderStyle(e.target);if(!style)return;await put('folders',{...f,name:String(fd.get('name')).trim(),description:String(fd.get('description')).trim(),parentId:String(fd.get('parentId')||'')||null,...style});closeModal();await refresh()};initFolderStyleControls($('folderEditForm'))}
 function keywordSuggestion(text){const words=String(text).replace(/https?:\/\/\S+/g,' ').match(/[가-힣A-Za-z0-9]{2,}/g)||[];const stop=new Set(['그리고','하지만','있는','대한','관련','정보','내용','정리','위한','this','that','with','from']);const count={};for(const w of words){const k=w.toLowerCase();if(!stop.has(k))count[k]=(count[k]||0)+1}return Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
 function validUrl(value){try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)}catch{return false}}
@@ -499,8 +573,134 @@ async function importBackup(file){if(!file)return;try{if(file.size>80*1024*1024)
    if(Date.now()<blockClickUntil&&target){e.preventDefault();e.stopImmediatePropagation()}
  },true);
 })();
-document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder),related=posts.filter(p=>p.folderId===f.id);if(folderChildren(f.id,f.platform).length){alert('하위 폴더가 존재합니다. 하위 폴더를 먼저 이동하거나 삭제해 주세요.');return}if(confirm(`'${f.name}' 폴더와 스크랩 ${related.length}개를 모두 삭제하시겠습니까?`)){for(const p of related)await del('posts',p.id);await del('folders',f.id);route.folder=null;await refresh()}}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){if(confirm('이 스크랩을 삭제하시겠습니까?')){await del('posts',t.dataset.delpost);await refresh()}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;await put('folders',{id:uid(),platform:route.platform,parentId:route.folder||null,name,description,...style,createdAt:today()});await refresh()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);openDB().then(d=>{db=d;window.scrapRefresh=refresh;refresh()}).catch(err=>{$('view').innerHTML=`<div class="warning">브라우저 저장소를 열지 못했습니다. 일반 브라우저에서 열거나 로컬 서버를 이용하세요. ${escapeHtml(err.message)}</div>`});
+document.addEventListener('click',async e=>{const t=e.target.closest('button,a,img');if(!t)return;if(t.id==='homeLayoutToggle'){homeLayout=homeLayout==='list'?'grid':'list';renderHomeSearchBody()}else if(t.dataset.homeOpen){go(t.dataset.homePlatform,t.dataset.homeOpen)}else if(t.id==='folderLayoutToggle'){folderLayout=folderLayout==='list'?'grid':'list';updatePostList()}else if(t.id==='igAdvancedBtn')instagramAdvancedModal();else if(t.id==='igSearchClear'){igSearchQuery='';igAdvanced={folder:'',year:'',keyword:''};igSearchActive=false;render()}else if(t.dataset.igLayoutToggle){igSearchLayout=igSearchLayout==='list'?'grid':'list';renderInstagramResults()}else if(t.dataset.searchEdit){const p=posts.find(x=>x.id===t.dataset.searchEdit);if(p){route.folder=p.folderId;postModal(p);route.folder=null}}else if(t.dataset.nav==='home')go();else if(t.dataset.nav==='platform')go(route.platform);else if(t.dataset.platform)go(t.dataset.platform);else if(t.dataset.folder)go(route.platform,t.dataset.folder);else if(t.id==='addPost')postModal();else if(t.id==='editFolder')folderModal(folders.find(f=>f.id===route.folder));else if(t.id==='deleteFolder'){const f=folders.find(f=>f.id===route.folder),related=posts.filter(p=>p.folderId===f.id);if(folderChildren(f.id,f.platform).length){alert('하위 폴더가 존재합니다. 하위 폴더를 먼저 이동하거나 삭제해 주세요.');return}if(confirm(`'${f.name}' 폴더와 스크랩 ${related.length}개를 모두 삭제하시겠습니까?`)){for(const p of related)await del('posts',p.id);await del('folders',f.id);route.folder=null;await refresh()}}else if(t.dataset.editpost)postModal(posts.find(p=>p.id===t.dataset.editpost));else if(t.dataset.delpost){if(confirm('이 스크랩을 삭제하시겠습니까?')){await del('posts',t.dataset.delpost);await refresh()}}else if(t.dataset.image)showImage(t.dataset.image,Number(t.dataset.index));else if(t.hasAttribute('data-close'))closeModal();else if(t.id==='overlay'&&e.target===t)closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.key==='Enter'||e.key===' ')&&e.target.matches('img[data-image]')){e.preventDefault();showImage(e.target.dataset.image,Number(e.target.dataset.index))}});document.addEventListener('input',e=>{if(e.target.id==='homeSearch'){homeQuery=e.target.value;renderHomeSearchBody()}else if(e.target.id==='search')updatePostList();else if(e.target.id==='igGlobalSearch'){igSearchQuery=e.target.value;igSearchActive=Boolean(igSearchQuery.trim()||igAdvanced.folder||igAdvanced.year||igAdvanced.keyword);renderInstagramResults()}});document.addEventListener('change',e=>{if(e.target.id==='homeSort'){homeSort=e.target.value;updateHomeResults()}else if(e.target.id==='homeDisplay'){homeDisplay=e.target.value;updateHomeResults()}else if(['sort','display'].includes(e.target.id))updatePostList()});document.addEventListener('submit',async e=>{if(e.target.id!=='folderForm')return;e.preventDefault();const name=$('folderName').value.trim(),description=$('folderDesc').value.trim();if(!name)return;const style=readFolderStyle(e.target);if(!style)return;const inModal=Boolean(e.target.closest('#modalRoot'));await put('folders',{id:uid(),platform:route.platform,parentId:route.folder||null,name,description,...style,createdAt:today()});await refresh();if(inModal)closeModal()});document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateArchivePeriod()});window.addEventListener('focus',updateArchivePeriod);$('exportBtn').onclick=exportBackup;$('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=e=>importBackup(e.target.files[0]);openDB().then(d=>{db=d;window.scrapRefresh=refresh;refresh()}).catch(err=>{$('view').innerHTML=`<div class="warning">브라우저 저장소를 열지 못했습니다. 일반 브라우저에서 열거나 로컬 서버를 이용하세요. ${escapeHtml(err.message)}</div>`});
 </script><script src="./font-settings.js?v=font-modal-layer-fix-v2"></script><script src="./image-gallery.js?v=gallery-cover-first-05"></script><script src="./folder-emoji-picker.js?v=emoji-picker-03"></script><script src="./api-settings.js?v=api-key-only-04"></script><script src="./guest-entry.js?v=guest-login-01" defer></script>
-<script src="./guest-font-public-export.js?v=1"></script><script src="./archive-menu.js?v=menu-20261121-01"></script>
+<script src="./guest-font-public-export.js?v=1"></script><script src="./archive-menu.js?v=menu-20261123-folder-create"></script>
 
-<script src="./guest-json-export.js?v=1"></script><script src="./github-direct-publish.js?v=1"></script></body></html>
+<script src="./guest-json-export.js?v=1"></script><script src="./github-direct-publish.js?v=1"></script>
+<!-- subfolder-modal-layout-v3 -->
+<style>
+#modalRoot .overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(20, 28, 50, .65);
+}
+
+#modalRoot .dialog {
+  position: relative;
+  width: min(620px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+}
+
+#modalRoot .subfolder-horizontal {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+#modalRoot .subfolder-collapse-trigger {
+  display: none;
+}
+
+#modalRoot .subfolder-row1,
+#modalRoot .subfolder-row2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+#modalRoot .subfolder-row1 .field,
+#modalRoot .subfolder-row2 .field {
+  min-width: 0;
+  width: 100%;
+}
+
+#modalRoot input,
+#modalRoot textarea,
+#modalRoot select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+#modalRoot .subfolder-emoji-options {
+  max-width: 100%;
+}
+
+.subfolder-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dfe3ed;
+  border-radius: 9px;
+  background: #fff;
+  color: #344054;
+  font-size: 23px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+#modalRoot .dialog > h2 {
+  padding-right: 42px;
+}
+
+@media (max-width: 550px) {
+  #modalRoot .dialog {
+    padding: 18px;
+  }
+}
+</style>
+
+<!-- cleanup-20261123: 폴더 팝업 정리 (subfolder-modal v3~v6, folder-white-button-match, folder-button-diagnostic 대체) -->
+<script>
+(function () {
+  // 폴더 생성 팝업(하위·상위 공통): 접힌 입력 영역 펼치기, 오른쪽 위 × 닫기 버튼, 이모지 버튼 문구
+  function tidyFolderModal() {
+    const root = document.getElementById('modalRoot');
+    const dialog = root && root.querySelector('.dialog');
+    const form = root && root.querySelector('#folderForm');
+    if (!dialog || !form) return;
+    const details = form.closest('details');
+    if (details) { if (!details.open) details.open = true; if (details.style.display !== 'block') details.style.display = 'block'; }
+    if (!dialog.querySelector('.subfolder-modal-close')) {
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'subfolder-modal-close';
+      close.textContent = '×';
+      close.setAttribute('aria-label', '팝업 닫기');
+      close.setAttribute('data-close', '');
+      dialog.prepend(close);
+    }
+    const label = '전체 이모지 선택';
+    root.querySelectorAll('button').forEach(b => {
+      const t = b.textContent;
+      if (b.classList.contains('subfolder-emoji-toggle') || t.includes('전체 이모지 검색') || t.includes(label)) {
+        if (t.trim() !== label) b.textContent = label;
+        if (b.getAttribute('aria-label') !== label) b.setAttribute('aria-label', label);
+      }
+    });
+  }
+  function init() {
+    const root = document.getElementById('modalRoot');
+    if (root) new MutationObserver(tidyFolderModal).observe(root, { childList: true, subtree: true });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+
+</body></html>
