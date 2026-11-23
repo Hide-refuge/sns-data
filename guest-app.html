@@ -422,7 +422,7 @@ html{scroll-padding-top:56px}
 #modalRoot .dialog .post-modal-head h2{margin:0;padding:0}
 #modalRoot .dialog .post-modal-close{flex:none;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dfe3ed;border-radius:9px;background:#fff;color:#344054;font-size:23px;line-height:1;padding:0;cursor:pointer}
 @media (max-width:550px){#modalRoot .dialog .post-modal-head{top:-18px;margin:-18px -18px 12px;padding:16px 18px 10px}}
-</style><!-- navfix-20261123: 이 파일은 index.html에서 자동 생성됩니다 (navfix.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
+</style><!-- noback-20261123: 이 파일은 index.html에서 자동 생성됩니다 (noback.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
 <style id="guest-readonly-style">
 #syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#cbhApiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,.subfolder-create,#openFolderCreate,#openSubfolderModal,.item-move-hint,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave,#openFolderDelete,#backupTrashBtn {display:none!important}
 /* 기본 화면의 버튼 통합 스타일(display:inline-flex!important)보다 우선하도록 더 구체적인 선택자로 한 번 더 숨김 */
@@ -1129,7 +1129,7 @@ fetch('./guest-fonts.json',{method:'HEAD',cache:'no-store'}).then(r=>{
  bar.addEventListener('click',e=>{const b=e.target.closest('[data-navtab]');if(!b)return;const k=b.dataset.navtab||null;if(k===route.platform&&!route.folder){scrollTo({top:0,behavior:'smooth'});return}go(k,null)});
  const syncBar=()=>{bar.querySelectorAll('[data-navtab]').forEach(b=>{const on=(b.dataset.navtab||null)===(route.platform||null);b.classList.toggle('on',on);b.setAttribute('aria-current',on?'page':'false')});
   document.body.classList.toggle('has-tabbar',isPhone())};
- const all=()=>{tryDeep();syncBack();syncCount();syncStuck();syncFab();syncBar()};
+ const all=()=>{tryDeep();document.getElementById('navBack')?.remove(); /* noback-20261123: 뒤로 가기 글자 버튼 표시 안 함 */syncCount();syncStuck();syncFab();syncBar()};
  const start=()=>{document.body.append(fabs,bar);const v=view();if(v)new MutationObserver(all).observe(v,{childList:true,subtree:true});
   addEventListener('scroll',()=>{syncStuck();syncFab()},{passive:true});matchMedia(PHONE).addEventListener?.('change',all);all()};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
