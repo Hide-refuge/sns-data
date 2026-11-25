@@ -422,7 +422,7 @@ html{scroll-padding-top:56px}
 #modalRoot .dialog .post-modal-head h2{margin:0;padding:0}
 #modalRoot .dialog .post-modal-close{flex:none;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dfe3ed;border-radius:9px;background:#fff;color:#344054;font-size:23px;line-height:1;padding:0;cursor:pointer}
 @media (max-width:550px){#modalRoot .dialog .post-modal-head{top:-18px;margin:-18px -18px 12px;padding:16px 18px 10px}}
-</style><!-- liquidglass-20261123: 이 파일은 index.html에서 자동 생성됩니다 (liquidglass.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
+</style><!-- liquidglass2-20261126: 이 파일은 index.html에서 자동 생성됩니다 (liquidglass2.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
 <style id="guest-readonly-style">
 #syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#cbhApiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,.subfolder-create,#openFolderCreate,#openSubfolderModal,.item-move-hint,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave,#openFolderDelete,#backupTrashBtn {display:none!important}
 /* 기본 화면의 버튼 통합 스타일(display:inline-flex!important)보다 우선하도록 더 구체적인 선택자로 한 번 더 숨김 */
@@ -1188,4 +1188,121 @@ html body #crumb,html body .nav-tabbar{background:rgba(244,248,255,.94)!importan
 @media (prefers-reduced-transparency:reduce){
 html body .panel,html body .platform,html body .folder,html body .note,html body .empty,html body .dialog,html body .archive-menu-drawer{background:rgba(255,255,255,.86)!important}
 html body #crumb,html body .nav-tabbar{background:rgba(244,248,255,.94)!important}}
-</style></body></html>
+</style><style id="liquidglass2-20261126">
+/* liquidglass2-20261126: iOS 리퀴드 글래스 원칙 반영 (내용층·조작층 분리, 떠 있는 캡슐, 가장자리 반사광, 동심 모서리) */
+/* 1) 내용층(카드)은 잘 읽히는 서리 유리, 조작층(버튼·탭바·메뉴)만 맑은 유리 */
+html body .panel,html body .platform,html body .folder,html body .note,html body .empty{
+ background:linear-gradient(165deg,rgba(255,255,255,.74),rgba(255,255,255,.56))!important;
+ -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%);
+ border:1px solid rgba(255,255,255,.8)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 1px 2px rgba(30,64,175,.05),0 12px 32px -12px rgba(30,64,175,.18)!important}
+html body .note{border-left:1px solid rgba(255,255,255,.8)!important}
+html body .folder{border-top:1px solid rgba(255,255,255,.95)!important}
+html body #archiveEyebrow,html body .section-head h2,html body #view h2,html body .note h3,html body .folder strong,html body .platform strong{text-shadow:none!important}
+/* 2) 동심 모서리: 카드 22px 안쪽 요소는 그보다 작게 */
+html body .thumb{border-radius:10px!important}
+html body .note .chip{background:rgba(58,135,254,.08)!important;border-color:rgba(58,135,254,.10)!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+/* 3) 유리 버튼: 위쪽 반사광 + 가장자리 빛 테두리 */
+html body .btn,html body a.btn,html body .archive-menu-toggle,html body .nav-fab-top,html body .post-modal-close,html body .archive-menu-drawer .archive-menu-close{
+ background:radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.78),rgba(255,255,255,0) 58%),rgba(255,255,255,.34)!important;
+ border:1px solid rgba(255,255,255,.75)!important;
+ -webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);
+ box-shadow:inset 1px 1px 0 rgba(255,255,255,.95),inset -1px -1px 0 rgba(255,255,255,.4),0 1px 2px rgba(30,64,175,.06),0 6px 16px -4px rgba(30,64,175,.16)!important}
+html body .archive-menu-toggle{border-radius:999px!important}
+/* 4) 색은 주요 동작 하나에만: 스크랩 추가·폴더 생성·＋ 버튼 */
+html body .btn.primary,html body #openFolderCreate,html body .nav-fab-add{
+ background:radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.45),rgba(255,255,255,0) 55%),linear-gradient(180deg,#5C9EFF,#3A87FE)!important;color:#fff!important;
+ border:1px solid rgba(255,255,255,.5)!important;
+ box-shadow:inset 1px 1px 0 rgba(255,255,255,.6),inset -1px -1px 0 rgba(255,255,255,.18),0 8px 20px -4px rgba(58,135,254,.5)!important}
+html body .section-head .actions>#openSubfolderModal{background:radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.78),rgba(255,255,255,0) 58%),rgba(255,255,255,.34)!important;color:#1E50E6!important;border:1px solid rgba(255,255,255,.75)!important;box-shadow:inset 1px 1px 0 rgba(255,255,255,.95),inset -1px -1px 0 rgba(255,255,255,.4),0 6px 16px -4px rgba(30,64,175,.16)!important}
+html body .btn:active,html body .nav-fab:active,html body .nav-tabbar button:active{transform:scale(.96)}
+html body .btn,html body .nav-fab{transition:transform .15s ease,box-shadow .2s ease}
+/* 5) 상단 경로 줄: 딱딱한 띠 대신 아래로 흐려지는 가장자리 */
+html body #crumb{background:linear-gradient(180deg,rgba(244,248,255,.82) 0%,rgba(244,248,255,.6) 70%,rgba(244,248,255,0) 100%)!important;
+ -webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%);
+ -webkit-mask-image:linear-gradient(180deg,#000 72%,transparent);mask-image:linear-gradient(180deg,#000 72%,transparent);
+ box-shadow:none!important;padding-bottom:20px!important;margin-bottom:-8px}
+html body #crumb.nav-stuck{box-shadow:none!important}
+/* 6) 휴대폰 하단 탭바: 화면 가장자리에서 떨어져 떠 있는 캡슐 */
+@media (max-width:699px){
+ html body .nav-tabbar{left:12px;right:12px;bottom:calc(8px + env(safe-area-inset-bottom));padding:6px 6px;border-radius:32px;
+  background:radial-gradient(120% 100% at 30% 0%,rgba(255,255,255,.7),rgba(255,255,255,0) 60%),rgba(240,246,255,.74)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(190%);backdrop-filter:blur(24px) saturate(190%);
+  border:1px solid rgba(255,255,255,.75)!important;
+  box-shadow:inset 1px 1px 0 rgba(255,255,255,.95),inset -1px -1px 0 rgba(255,255,255,.45),0 12px 30px -8px rgba(30,64,175,.28)!important}
+ html body .nav-tabbar button{min-height:50px;border-radius:26px}
+ html body .nav-tabbar button.on{background:rgba(58,135,254,.12)!important;color:#1E50E6!important}
+ html body .nav-tabbar button.on b{background:none!important;border:0!important;padding:0!important;box-shadow:none!important}
+ html body .nav-fabs{bottom:calc(92px + env(safe-area-inset-bottom))}
+ html body .app{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+}
+/* 7) 관리 메뉴: 화면 끝에 붙지 않고 떠 있는 유리판 */
+html body .archive-menu-drawer{top:10px!important;right:10px!important;height:calc(100dvh - 20px)!important;border-radius:30px!important;border:1px solid rgba(255,255,255,.85)!important;
+ background:radial-gradient(90% 40% at 20% 0%,rgba(255,255,255,.7),rgba(255,255,255,0) 60%),rgba(244,249,255,.87)!important;
+ box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 rgba(255,255,255,.5),0 24px 60px -12px rgba(30,64,175,.3)!important}
+html body .archive-menu-backdrop{background:rgba(22,42,92,.12)!important;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+/* 8) 입력 창(팝업): 뒤를 살짝 어둡게 해 집중, 창은 더 불투명한 유리 */
+html body .overlay{background:rgba(22,42,92,.18)!important;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+html body .dialog{background:radial-gradient(90% 40% at 20% 0%,rgba(255,255,255,.75),rgba(255,255,255,0) 60%),rgba(246,250,255,.82)!important;border:1px solid rgba(255,255,255,.9)!important;border-radius:32px!important;
+ box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 rgba(255,255,255,.5),0 30px 70px -16px rgba(30,64,175,.35)!important}
+html body input,html body select,html body textarea{background:rgba(255,255,255,.55)!important;border:1px solid rgba(58,135,254,.14)!important;box-shadow:inset 0 1px 2px rgba(30,64,175,.06)!important}
+html body input:focus,html body select:focus,html body textarea:focus{outline:none;border-color:rgba(58,135,254,.55)!important;box-shadow:0 0 0 4px rgba(58,135,254,.16)!important}
+/* ── 2차 수정 (사용자 검토 반영) ── */
+/* 9) 뒷배경 채도: 현재 대비 75% */
+html body{background:#F5F8FE!important}
+html body::before{background:radial-gradient(42% 32% at 12% 18%,rgba(83,140,230,.256),transparent 70%),radial-gradient(38% 30% at 92% 46%,rgba(253,239,253,.76),transparent 70%),
+ radial-gradient(46% 34% at 38% 92%,rgba(83,140,230,.192),transparent 72%),linear-gradient(180deg,#FAFBFE 0%,#ECF2FC 60%,#DEEAFA 100%)!important}
+/* 10) 경로 줄: 글자 길이에 맞춘 유리 캡슐 (스크랩 수는 오른쪽 작은 캡슐 유지) */
+html body #crumb{background:transparent!important;-webkit-backdrop-filter:none;backdrop-filter:none;padding-top:8px!important;padding-bottom:10px!important;margin-bottom:-4px}
+html body #crumb.nav-stuck{background:linear-gradient(180deg,rgba(244,248,255,.6) 0%,rgba(244,248,255,.35) 70%,rgba(244,248,255,0) 100%)!important;-webkit-backdrop-filter:blur(14px) saturate(170%);backdrop-filter:blur(14px) saturate(170%)}
+html body #crumb .crumb-path{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 8px;min-width:0;max-width:100%;box-sizing:border-box;padding:8px 16px;border-radius:22px;color:#1E50E6!important;
+ background:radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.8),rgba(255,255,255,0) 58%),rgba(255,255,255,.5);
+ border:1px solid rgba(255,255,255,.8);-webkit-backdrop-filter:blur(16px) saturate(180%);backdrop-filter:blur(16px) saturate(180%);
+ box-shadow:inset 1px 1px 0 rgba(255,255,255,.95),inset -1px -1px 0 rgba(255,255,255,.4),0 6px 16px -4px rgba(30,64,175,.16)}
+html body #crumb .nav-count{padding:6px 12px!important;border:0!important;background:rgba(58,135,254,.12)!important;color:#2A6FE0!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)!important}
+@media (max-width:699px){
+ html body #crumb{gap:6px!important}
+ html body #crumb .crumb-path{padding:6px 12px;gap:3px 6px}
+ html body #crumb .nav-count{padding:5px 10px!important}
+}
+/* 11) 휴대폰 홈 플랫폼 카드: 4개가 하단 탭바 위 한 화면에 모두 보이도록 축소 */
+@media (max-width:760px){
+ html body #view .platform{padding:11px 13px!important;gap:6px!important;border-radius:18px!important}
+ html body #view .platform>*{zoom:.76}
+ html body #view .platform>.muted:last-child{padding-top:0!important}
+ html body #view .grid:has(>.platform){gap:10px}
+}
+/* 12) 관리 메뉴 판: 비치는 정도를 80%로 (위 7번 배경값에 반영) */
+/* 13) 폰트 설정 창 윗부분: 흰색 배경 삭제, 내용이 지나갈 때만 흐리게 */
+html body #modalRoot .font-dialog .font-head{background:transparent!important;border-bottom:0!important;padding-bottom:16px!important;
+ -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);-webkit-mask-image:linear-gradient(180deg,#000 78%,transparent);mask-image:linear-gradient(180deg,#000 78%,transparent)}
+/* 14) 폴더 테두리 색상 칩: 모서리가 둥근 네모 유리 칩 */
+html body .folder-color-picker input[type=color]{-webkit-appearance:none;appearance:none;width:44px!important;height:44px!important;min-width:44px;padding:5px!important;border-radius:14px!important;cursor:pointer;
+ border:1px solid rgba(255,255,255,.9)!important;background:radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.85),rgba(255,255,255,0) 60%),rgba(255,255,255,.45)!important;
+ -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 rgba(255,255,255,.5),0 6px 14px -4px rgba(30,64,175,.22)!important}
+html body .folder-color-picker input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+html body .folder-color-picker input[type=color]::-webkit-color-swatch{border:0;border-radius:9px;box-shadow:inset 0 0 0 1px rgba(30,64,175,.18)}
+html body .folder-color-picker input[type=color]::-moz-color-swatch{border:0;border-radius:9px}
+/* 투명도 줄이기·흐림 미지원 기기 */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+ html body .nav-tabbar,html body .dialog,html body .archive-menu-drawer{background:rgba(246,250,255,.96)!important}
+ html body #crumb .crumb-path,html body #crumb .nav-count{background:rgba(255,255,255,.94)!important}
+ html body #modalRoot .font-dialog .font-head{background:rgba(246,250,255,.96)!important;-webkit-mask-image:none;mask-image:none}
+ html body #crumb{background:rgba(244,248,255,.96)!important;-webkit-mask-image:none;mask-image:none}}
+@media (prefers-reduced-transparency:reduce){
+ html body .panel,html body .platform,html body .folder,html body .note,html body .empty{background:rgba(255,255,255,.92)!important}
+ html body .nav-tabbar,html body .dialog,html body .archive-menu-drawer{background:rgba(246,250,255,.96)!important}
+ html body #crumb .crumb-path,html body #crumb .nav-count{background:rgba(255,255,255,.94)!important}
+ html body #modalRoot .font-dialog .font-head{background:rgba(246,250,255,.96)!important;-webkit-mask-image:none;mask-image:none}
+ html body #crumb{background:rgba(244,248,255,.96)!important;-webkit-mask-image:none;mask-image:none}}
+</style><script id="liquidglass2-20261126-crumb">
+/* 경로 줄 캡슐: 홈 › 플랫폼 › 폴더 부분을 하나의 묶음(.crumb-path)으로 감쌈 */
+(()=>{const c=document.getElementById('crumb');if(!c)return;
+ const wrap=()=>{let p=c.querySelector(':scope>.crumb-path');
+  const items=[...c.children].filter(x=>x!==p&&x.id!=='navBack'&&!x.classList.contains('nav-count'));
+  if(!items.length)return;
+  if(!p){p=document.createElement('span');p.className='crumb-path'}
+  items.forEach(x=>p.appendChild(x));
+  if(p.parentNode!==c){const b=c.querySelector(':scope>#navBack');b?b.after(p):c.prepend(p)}};
+ new MutationObserver(wrap).observe(c,{childList:true});wrap();})();
+</script></body></html>
