@@ -422,7 +422,7 @@ html{scroll-padding-top:56px}
 #modalRoot .dialog .post-modal-head h2{margin:0;padding:0}
 #modalRoot .dialog .post-modal-close{flex:none;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dfe3ed;border-radius:9px;background:#fff;color:#344054;font-size:23px;line-height:1;padding:0;cursor:pointer}
 @media (max-width:550px){#modalRoot .dialog .post-modal-head{top:-18px;margin:-18px -18px 12px;padding:16px 18px 10px}}
-</style><!-- liquidglass2-20261126: 이 파일은 index.html에서 자동 생성됩니다 (liquidglass2.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
+</style><!-- mobiletype-20261126: 이 파일은 index.html에서 자동 생성됩니다 (mobiletype.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
 <style id="guest-readonly-style">
 #syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#cbhApiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,.subfolder-create,#openFolderCreate,#openSubfolderModal,.item-move-hint,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave,#openFolderDelete,#backupTrashBtn {display:none!important}
 /* 기본 화면의 버튼 통합 스타일(display:inline-flex!important)보다 우선하도록 더 구체적인 선택자로 한 번 더 숨김 */
@@ -590,7 +590,7 @@ function safeFolderColor(c){return /^#[0-9a-fA-F]{6}$/.test(String(c||''))?c:'#e
 function folderStyleFields(f={}){const color=safeFolderColor(f.color||'#e3e7f0'),icon=f.icon||'📁';return `<div class="field"><label>폴더 테두리 색상 (색상표 또는 HEX 코드)</label><div class="folder-color-picker"><input type="color" data-color-picker value="${color}" aria-label="테두리 색상 선택"><input type="text" name="color" data-color-text maxlength="7" value="${color}" placeholder="#000000" aria-label="HEX 색상 코드"></div></div><div class="field"><label>폴더 아이콘 (이모지 선택)</label><div class="folder-emoji-options">${FOLDER_EMOJIS.map(e=>`<button type="button" class="btn ${e===icon?'selected':''}" data-emoji="${e}" aria-label="${e} 선택">${e}</button>`).join('')}</div><input type="hidden" name="icon" value="${escapeHtml(icon)}"></div><div class="folder-style-preview" data-style-preview style="border-color:${color}"><span class="foldericon" data-preview-icon>${escapeHtml(icon)}</span><span>폴더 디자인 미리보기</span></div>`}
 function initFolderStyleControls(root){if(!root)return;const picker=root.querySelector('[data-color-picker]'),txt=root.querySelector('[data-color-text]'),preview=root.querySelector('[data-style-preview]'),icon=root.querySelector('[name=icon]');if(!picker||!txt)return;picker.oninput=()=>{txt.value=picker.value;if(preview)preview.style.borderColor=picker.value};txt.oninput=()=>{if(/^#[0-9a-fA-F]{6}$/.test(txt.value)){picker.value=txt.value;if(preview)preview.style.borderColor=txt.value}};root.querySelectorAll('[data-emoji]').forEach(btn=>btn.onclick=()=>{icon.value=btn.dataset.emoji;const previewIcon=root.querySelector('[data-preview-icon]');if(previewIcon)previewIcon.textContent=btn.dataset.emoji;const current=root.querySelector('[data-emoji-current]');if(current)current.textContent=btn.dataset.emoji;const options=btn.closest('.folder-emoji-options');if(options&&root.querySelector('.subfolder-emoji-toggle')){options.hidden=true;root.querySelector('.subfolder-emoji-toggle').setAttribute('aria-expanded','false')}root.querySelectorAll('[data-emoji]').forEach(x=>x.classList.toggle('selected',x===btn))})}
 function readFolderStyle(form){const color=String(form.querySelector('[name=color]')?.value||'#e3e7f0').trim();if(!/^#[0-9a-fA-F]{6}$/.test(color)){alert('색상 코드는 #000000 형식으로 입력해 주세요.');return null}return {color,icon:String(form.querySelector('[name=icon]')?.value||'📁')}}
-function instagramSearchBar(){return `<div class="ig-searchbar"><label class="ig-searchbox"><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="igGlobalSearch" type="search" autocomplete="off" placeholder="모든 폴더에서 제목·키워드·@계정 검색" value="${escapeHtml(igSearchQuery)}" aria-label="인스타그램 전체 스크랩 검색"></label><button class="btn" id="igAdvancedBtn" type="button" aria-label="상세 검색 열기" title="상세 검색">＋</button></div><div id="igGlobalResults" class="hidden"></div><div id="igFolderContents">`}
+function instagramSearchBar(){return `<div class="ig-searchbar"><label class="ig-searchbox"><svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input id="igGlobalSearch" type="search" autocomplete="off" placeholder="제목·키워드·@계정 검색" value="${escapeHtml(igSearchQuery)}" aria-label="인스타그램 전체 스크랩 검색"></label><button class="btn" id="igAdvancedBtn" type="button" aria-label="상세 검색 열기" title="상세 검색">＋</button></div><div id="igGlobalResults" class="hidden"></div><div id="igFolderContents">`}
 function filterInstagramPosts(){const q=igSearchQuery.trim().toLocaleLowerCase(),isAccount=q.startsWith('@'),account=q.slice(1).trim();return posts.filter(p=>{if(p.platform!=='instagram')return false;if(q){if(isAccount){if(!account||!String(p.authorHandle||'').replace(/^@/,'').toLocaleLowerCase().includes(account))return false}else if(![p.title,...(p.keywords||[])].join(' ').toLocaleLowerCase().includes(q))return false}if(igAdvanced.folder&&p.folderId!==igAdvanced.folder)return false;if(igAdvanced.year&&String(p.createdAt||'').slice(0,4)!==igAdvanced.year)return false;if(igAdvanced.keyword&&!((p.keywords||[]).join(' ').toLocaleLowerCase().includes(igAdvanced.keyword.toLocaleLowerCase())))return false;return true}).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')))}
 function instagramPostCard(p){const folder=folders.find(f=>f.id===p.folderId);const profile=authorProfileUrl(p.platform,p.authorHandle);return `<article class="note" data-font-post="${escapeHtml(p.id)}"><div><div class="muted" style="margin-bottom:6px">${escapeHtml(folder?.icon||'📁')} ${escapeHtml(folder?.name||'삭제된 폴더')}</div><h3>${escapeHtml(p.title||'제목 없음')}</h3><div class="chips">${(p.keywords||[]).map(k=>`<span class="chip">#${escapeHtml(k)}</span>`).join('')}<span class="chip" title="중요도">${'⭐'.repeat(Math.min(5,Math.max(1,Number(p.priority)||1)))}</span></div><p class="summary">${escapeHtml(p.summary||'')}</p><div class="thumbs">${(p.images||[]).map((img,i)=>`<img class="thumb" data-image="${escapeHtml(p.id)}" data-index="${i}" src="${img}" alt="첨부 이미지 ${i+1}">`).join('')}</div><div class="meta">추가일 ${formatDate(p.createdAt)}</div></div><div class="note-actions"><a class="btn" href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer">원문 ↗</a>${profile?`<a class="btn" href="${escapeHtml(profile)}" target="_blank" rel="noopener noreferrer">@${escapeHtml(p.authorHandle.replace(/^@/,''))} ↗</a>`:''}${p.authorName&&profile?`<a class="btn" href="${escapeHtml(profile)}" target="_blank" rel="noopener noreferrer">${escapeHtml(p.authorName)} ↗</a>`:''}<button class="btn" data-search-edit="${escapeHtml(p.id)}">수정</button><button class="btn danger delete-action" data-delpost="${escapeHtml(p.id)}">삭제</button></div></article>`}
 function renderInstagramResults(){queueMicrotask(()=>window.scrapFontApply?.());const results=$('igGlobalResults'),contents=$('igFolderContents');if(!results||!contents)return;results.classList.toggle('hidden',!igSearchActive);contents.classList.toggle('hidden',igSearchActive);if(!igSearchActive)return;const list=filterInstagramPosts(),filters=[igSearchQuery.trim()&&`검색어: ${igSearchQuery.trim()}`,igAdvanced.folder&&`폴더: ${folders.find(f=>f.id===igAdvanced.folder)?.name||''}`,igAdvanced.year&&`추가 연도: ${igAdvanced.year}`,igAdvanced.keyword&&`키워드: ${igAdvanced.keyword}`].filter(Boolean).join(' · ');results.innerHTML=`<div class="search-result-head"><div><strong>전체 검색 결과 ${list.length}개</strong><div class="hint">${escapeHtml(filters||'인스타그램 전체 스크랩')}</div></div><div class="actions search-view-actions"><button type="button" class="btn search-view-toggle" id="igLayoutToggle" data-ig-layout-toggle="true" aria-label="검색 결과 보기 방식 전환, 현재 ${igSearchLayout==='list'?'리스트뷰':'그리드뷰'}" title="클릭하여 ${igSearchLayout==='list'?'그리드뷰':'리스트뷰'}로 전환">${igSearchLayout==='list'?'▦ 그리드뷰로 전환':'☰ 리스트뷰로 전환'}</button><button type="button" class="btn" id="igSearchClear">검색 닫기</button></div></div><div class="${igSearchLayout==='grid'?'search-results-grid':''}">${list.length?list.map(instagramPostCard).join(''):'<div class="empty">조건에 맞는 스크랩이 없습니다.</div>'}</div>`}
@@ -1305,4 +1305,39 @@ html body .folder-color-picker input[type=color]::-moz-color-swatch{border:0;bor
   items.forEach(x=>p.appendChild(x));
   if(p.parentNode!==c){const b=c.querySelector(':scope>#navBack');b?b.after(p):c.prepend(p)}};
  new MutationObserver(wrap).observe(c,{childList:true});wrap();})();
-</script></body></html>
+</script><style id="mobiletype-20261126">
+/* mobiletype-20261126: 휴대폰 글자 크기 체계 정리 (컴퓨터·태블릿 화면은 그대로) */
+/* 크기 단계(iOS 기준 참고): 화면 제목 22 · 카드 제목 16 · 본문 15 · 보조 13 · 작은 글자 12 · 탭 이름 11 */
+@media (max-width:699px){
+ /* 화면 제목과 설명 */
+ html body #view .section-head h2{font-size:22px!important;line-height:1.3!important}
+ html body #view .section-head h3{font-size:13px!important;line-height:1.5!important}
+ html body #view .section-head h3 .item-move-hint{font-size:12px!important}
+ /* 스크랩 카드 */
+ html body #view .note h3{font-size:16px!important;line-height:1.4!important}
+ html body #view .note .summary{font-size:15px!important;line-height:1.6!important}
+ html body #view .note .chip{font-size:12px!important;line-height:1.4!important}
+ html body #view .note .chip{padding:3px 7px!important}
+ html body #view .note .chips{gap:4px!important}
+ html body #view .note .meta,html body #view .note .meta *{font-size:12.5px!important;line-height:1.5!important}
+ html body #view .note .gallery-thumbs-count{font-size:12px!important}
+ html body #view .note .note-actions>a,html body #view .note .note-actions>button{font-size:13px!important}
+ /* 폴더 카드 */
+ html body #view .folder strong{font-size:16px!important;line-height:1.35!important}
+ html body #view .folder .fc-n,html body #view .folder small{font-size:13px!important}
+ /* 관리 메뉴 */
+ html body .archive-menu-drawer button.btn:not(#_){font-size:14px!important}
+ html body .archive-menu-drawer .hint{font-size:12.5px!important;line-height:1.6!important}
+ /* 입력 창 이름표, 아래 안내문 */
+ html body .dialog label{font-size:13px!important}
+ html body footer.footer{line-height:1.6!important}
+}
+/* 휴대폰 홈 플랫폼 카드: 축소(zoom) 대신 글자 크기를 직접 지정해 4개가 한 화면에 들어가면서 더 잘 읽히게 */
+@media (max-width:760px){
+ html body #view .platform>*{zoom:1!important}
+ html body #view .platform .glyph{font-size:20px!important;line-height:1!important}
+ html body #view .platform strong{font-size:16px!important;line-height:1.25!important;margin-bottom:3px!important}
+ html body #view .platform .muted{font-size:12.5px!important;line-height:1.35!important}
+ html body #view .platform>.muted:last-child{padding-top:0!important;margin-top:auto}
+}
+</style></body></html>
