@@ -1319,4 +1319,16 @@ html body br.mbr{display:none}
 @media (max-width:650px){
  html body .archive-menu-drawer{width:calc(min(410px,96vw) - 12px)!important;padding-left:10px!important;padding-right:10px!important}
 }
+</style><style id="emojinav-20261126">
+/* emojinav-20261126: 이모지 선택 창 — 카테고리 9개가 창 폭 안에 모두 보이도록 */
+@media (max-width:699px){
+ html body .cbh-emoji-panel emoji-picker{--category-emoji-size:1.05rem;--category-emoji-padding:0.2rem;--emoji-padding:0.3rem}
+}
+@supports (width:1cqw){
+ html body .cbh-emoji-panel{container-type:inline-size}
+ html body .cbh-emoji-panel emoji-picker{
+  --category-emoji-padding:4px;
+  --category-emoji-size:clamp(14px,calc(100cqw / 9 - 12px),1.45rem);
+  --emoji-padding:clamp(2px,calc((100cqw / 7 - 1.45rem) / 2 - 1px),0.5rem)}
+}
 </style></body></html>
