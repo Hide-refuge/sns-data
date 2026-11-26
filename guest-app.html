@@ -422,7 +422,7 @@ html{scroll-padding-top:56px}
 #modalRoot .dialog .post-modal-head h2{margin:0;padding:0}
 #modalRoot .dialog .post-modal-close{flex:none;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #dfe3ed;border-radius:9px;background:#fff;color:#344054;font-size:23px;line-height:1;padding:0;cursor:pointer}
 @media (max-width:550px){#modalRoot .dialog .post-modal-head{top:-18px;margin:-18px -18px 12px;padding:16px 18px 10px}}
-</style><!-- platformsearch-20261126: 이 파일은 index.html에서 자동 생성됩니다 (platformsearch.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
+</style><!-- mobilebreak-20261126: 이 파일은 index.html에서 자동 생성됩니다 (mobilebreak.py). 게스트 전용 부분 외에는 index.html과 같습니다. -->
 <style id="guest-readonly-style">
 #syncPanel,#importBtn,#exportBtn,#apiSettingsBtn,#cbhApiSettingsBtn,#addPost,#editFolder,#deleteFolder,#folderForm,.subfolder-create,#openFolderCreate,#openSubfolderModal,.item-move-hint,#folderMoveOpen,#itemMoveOpen,[data-editpost],[data-delpost],[data-search-edit],[data-search-edit-post],[data-folder-reorder],.folder-reorder-handle,#folderReorderBtn,#folderReorderCancel,#folderReorderSave,#openFolderDelete,#backupTrashBtn {display:none!important}
 /* 기본 화면의 버튼 통합 스타일(display:inline-flex!important)보다 우선하도록 더 구체적인 선택자로 한 번 더 숨김 */
@@ -1350,4 +1350,11 @@ html body .ig-searchbox input::placeholder{text-align:center}
 html body .ig-searchbox input:focus{box-shadow:none!important}
 html body .ig-searchbox input::-webkit-search-decoration{-webkit-appearance:none}
 html body .ig-searchbox:focus-within{outline:0!important;border-color:rgba(58,135,254,.55)!important;box-shadow:0 0 0 4px rgba(58,135,254,.16)!important}
+</style><style id="mobilebreak-20261126">
+/* mobilebreak-20261126: 휴대폰 전용 줄바꿈 · 관리 메뉴 폭 */
+html body br.mbr{display:none}
+@media (max-width:699px){html body br.mbr{display:inline}}
+@media (max-width:650px){
+ html body .archive-menu-drawer{width:calc(min(410px,96vw) - 12px)!important;padding-left:10px!important;padding-right:10px!important}
+}
 </style></body></html>
