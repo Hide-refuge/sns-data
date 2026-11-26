@@ -32,7 +32,7 @@ let dirty=false, baseRevision=null, localReady=false;
 let baseSnapshot=null;
 function syncState(){
  const el=$('cbhLocalSyncState');if(!el)return;
- el.textContent=dirty?'이 기기에 Google Drive 미동기화 변경 사항이 있습니다. 지금 동기화를 눌러 업로드하세요.':'Google Drive 미동기화 변경 사항 없음';
+ el.innerHTML=dirty?'이 기기에 Google Drive 미동기화 변경 사항이 있습니다. <br class="mbr">지금 동기화를 눌러 업로드하세요.':'Google Drive 미동기화 변경 사항 없음';
 }
 function ensureSyncState(){
  let el=$('cbhLocalSyncState');if(el)return syncState();
@@ -481,7 +481,7 @@ function initGIS(){
 function init(){
  if(typeof window.scrapRefresh!=='function'){setTimeout(init,100);return}
  draw();info();ensureSyncState();loadLocalState().then(()=>{syncState();window.scrapRefresh?.()}).catch(e=>msg('로컬 자료 읽기 실패: '+errorText(e)));
- const foot=document.querySelector('.footer');if(foot)foot.textContent='로그아웃 상태에서는 마지막 Drive 사본을 읽기 전용으로 표시합니다(사본이 없다면 기존 IndexedDB 사용). Google 로그인 상태에서는 Drive에 저장합니다. 중요한 자료는 정기적으로 백업하세요.';
+ const foot=document.querySelector('.footer');if(foot)foot.innerHTML='로그아웃 상태에서는 마지막 Drive 사본을 읽기 전용으로 표시합니다<br class="mbr">(사본이 없다면 기존 IndexedDB 사용). <br class="mbr">Google 로그인 상태에서는 Drive에 저장합니다. <br class="mbr">중요한 자료는 정기적으로 백업하세요.';
  const panel=$('syncPanel');if(panel){const paragraphs=panel.querySelectorAll('p.hint');for(const p of paragraphs){if(p.textContent.includes('Supabase 공식 Egress'))p.textContent='표시 용량은 저장 데이터 JSON 크기의 추정값입니다. Google Drive 실제 네트워크 전송량과는 다를 수 있습니다.';}}
  if(!cfg.clientId)return;
  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=initGIS;s.onerror=()=>msg('Google 로그인 라이브러리 로드 실패');document.head.appendChild(s);
